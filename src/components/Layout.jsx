@@ -17,21 +17,21 @@ export const Layout = () => {
       <header className="header">
         <div className="container header-content">
           <Link to="/" className="logo">
-            <HeartPulse size={28} color="#ef4444" />
+            <HeartPulse size={28} color="var(--accent-red)" />
             ANVI-SOS
           </Link>
           <nav className="nav-links">
             {user ? (
               <>
-                <Link to="/" className="nav-link"><Activity size={18} /> Dashboard</Link>
-                <Link to="/profile" className="nav-link"><User size={18} /> Profile</Link>
-                <Link to="/sos" className="nav-link" style={{color: '#ef4444'}}><AlertCircle size={18} /> SOS</Link>
-                <button onClick={handleLogout} className="btn btn-outline" style={{padding: '6px 12px', fontSize: '0.875rem'}}>
-                  <LogOut size={16} /> Logout
+                <Link to="/" className="nav-link"><Activity size={18} /> DASHBOARD</Link>
+                <Link to="/profile" className="nav-link"><User size={18} /> PROFILE</Link>
+                <Link to="/sos" className="nav-link" style={{color: 'var(--accent-red)'}}><AlertCircle size={18} /> SOS</Link>
+                <button onClick={handleLogout} className="btn btn-outline" style={{padding: '8px 16px', fontSize: '0.75rem', fontWeight: 800}}>
+                  <LogOut size={16} /> LOGOUT
                 </button>
               </>
             ) : (
-              <Link to="/login" className="btn btn-primary">Login</Link>
+              <Link to="/login" className="btn btn-primary">SIGN IN</Link>
             )}
           </nav>
         </div>

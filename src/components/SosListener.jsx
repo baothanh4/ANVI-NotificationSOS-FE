@@ -56,13 +56,15 @@ export const SosListener = () => {
         
         <div style={bodyStyle}>
           <div style={victimInfoStyle}>
-            <p style={{ color: '#94a3b8', marginBottom: '4px', fontSize: '0.9rem' }}>PHÁT HIỆN TÍN HIỆU TỪ:</p>
-            <h1 style={{ color: 'white', margin: 0, fontSize: '2rem' }}>{incomingSos.victimName}</h1>
+            <p style={{ color: '#666666', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em' }}>PHÁT HIỆN TÍN HIỆU TỪ:</p>
+            <h1 style={{ color: '#121212', margin: 0, fontSize: '2rem', fontWeight: 800 }}>{incomingSos.victimName}</h1>
           </div>
 
           <div style={locationBoxStyle}>
-            <MapPin size={18} color="#00f3ff" />
-            Vị trí đã được xác định. Hãy ứng cứu ngay lập tức!
+            <div style={{ fontWeight: 700, color: '#0064D2', marginBottom: '8px', fontSize: '0.72rem' }}>ĐỊA ĐIỂM XÁC ĐỊNH:</div>
+            <div style={{ color: '#121212', fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.4 }}>
+              {incomingSos.locationText || 'Đang cập nhật địa chỉ...'}
+            </div>
           </div>
 
           <div style={actionBoxStyle}>
@@ -73,14 +75,14 @@ export const SosListener = () => {
               }}
               style={btnOpenStyle}
             >
-              MỞ BẢN ĐỒ CHIẾN THUẬT
+              XEM CHI TIẾT & HỖ TRỢ
             </button>
             
             <button 
               onClick={() => setIncomingSos(null)}
               style={btnIgnoreStyle}
             >
-              Đóng thông báo
+              Bỏ qua thông báo
             </button>
           </div>
         </div>
@@ -104,43 +106,41 @@ export const SosListener = () => {
 
 const overlayStyle = {
   position: 'fixed', inset: 0, zIndex: 9999,
-  background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
-  display: 'flex', alignItems: 'center', justifyInContent: 'center', padding: '20px'
+  background: 'rgba(18,18,18,0.7)', backdropFilter: 'blur(8px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
 };
 
 const modalStyle = {
-  width: '100%', maxWidth: '450px',
-  background: '#0a0f14', border: '2px solid #ff2e2e',
-  boxShadow: '0 0 50px rgba(255,46,46,0.4)', borderRadius: '4px',
-  overflow: 'hidden', fontFamily: "'Orbitron', sans-serif"
+  width: '100%', maxWidth: '420px',
+  background: '#FFFFFF', borderTop: '8px solid #0064D2',
+  boxShadow: '0 20px 40px rgba(0,0,0,0.2)', borderRadius: '4px',
+  overflow: 'hidden', fontFamily: "'Work Sans', sans-serif"
 };
 
 const headerStyle = {
-  background: '#ff2e2e', color: 'white', padding: '20px',
-  display: 'flex', alignItems: 'center', gap: '15px', fontWeight: 900
+  background: '#F8F8F8', color: '#121212', padding: '24px',
+  display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #EEEEEE'
 };
 
-const bodyStyle = { padding: '30px', textAlign: 'center' };
+const bodyStyle = { padding: '32px', textAlign: 'center' };
 
-const victimInfoStyle = { marginBottom: '25px' };
+const victimInfoStyle = { marginBottom: '32px' };
 
 const locationBoxStyle = {
-  background: 'rgba(0,243,255,0.1)', border: '1px solid rgba(0,243,255,0.3)',
-  padding: '12px', borderRadius: '4px', color: '#00f3ff', fontSize: '0.9rem',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-  marginBottom: '30px'
+  background: '#F8F8F8', borderLeft: '4px solid #0064D2',
+  padding: '16px', borderRadius: '2px', textAlign: 'left',
+  marginBottom: '32px'
 };
 
 const actionBoxStyle = { display: 'flex', flexDirection: 'column', gap: '12px' };
 
 const btnOpenStyle = {
-  background: '#ff2e2e', color: 'white', border: 'none',
-  padding: '18px', fontWeight: 800, cursor: 'pointer',
-  letterSpacing: '1px', fontSize: '1rem',
-  clipPath: 'polygon(0 0, 95% 0, 100% 30%, 100% 100%, 5% 100%, 0 70%)'
+  background: '#0064D2', color: 'white', border: 'none',
+  padding: '16px', fontWeight: 700, cursor: 'pointer',
+  fontSize: '1rem', borderRadius: '4px', transition: '0.2s'
 };
 
 const btnIgnoreStyle = {
-  background: 'transparent', color: '#94a3b8', border: 'none',
-  padding: '10px', cursor: 'pointer', fontSize: '0.85rem'
+  background: 'transparent', color: '#666666', border: 'none',
+  padding: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500
 };

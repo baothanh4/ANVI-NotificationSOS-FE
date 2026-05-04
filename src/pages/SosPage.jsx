@@ -75,11 +75,21 @@ export const SosPage = () => {
       zoom: 15,
       zoomControl: true,
     });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
+    
+    // Theme bản đồ - Light Theme cho Transit Map
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors © CARTO',
       maxZoom: 19,
     }).addTo(map);
+    
     mapInstanceRef.current = map;
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [leafletReady]);
 
   // Bắt đầu theo dõi GPS
@@ -115,9 +125,9 @@ export const SosPage = () => {
           const icon = L.divIcon({
             html: `<div style="
               width:32px;height:32px;border-radius:50%;
-              background:linear-gradient(135deg,#ef4444,#dc2626);
+              background:#E02020;
               border:3px solid white;
-              box-shadow:0 0 0 4px rgba(239,68,68,0.3), 0 4px 12px rgba(0,0,0,0.4);
+              box-shadow:0 4px 12px rgba(0,0,0,0.2);
               display:flex;align-items:center;justify-content:center;
               font-size:14px;
             ">📍</div>`,
@@ -284,12 +294,12 @@ export const SosPage = () => {
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
 
       {/* ─── Title ─────────────────────── */}
-      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <h1 style={{ color: '#ef4444', fontSize: '1.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <Zap size={28} /> Hệ thống SOS Khẩn Cấp
+      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <h1 style={{ color: 'var(--text-primary)', fontSize: '2.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', letterSpacing: '-0.03em' }}>
+          <AlertTriangle size={36} color="var(--accent-red)" /> SOS SYSTEM
         </h1>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '6px' }}>
-          Nhấn nút SOS để gửi cảnh báo đến tất cả liên hệ khẩn cấp kèm vị trí GPS
+        <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontWeight: 500 }}>
+          Trạm điều hành cứu hộ khẩn cấp — Nhấn nút để yêu cầu hỗ trợ ngay lập tức
         </p>
       </div>
 
@@ -297,22 +307,22 @@ export const SosPage = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', alignItems: 'start' }}>
 
         {/* MAP */}
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
           {/* Map header */}
-          <div style={{ padding: '14px 20px', background: 'rgba(15,23,42,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.95rem' }}>
-              <MapPin size={18} color="#ef4444" />
-              <span>Vị trí Live</span>
+          <div style={{ padding: '20px 24px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid var(--text-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <MapPin size={18} color="var(--accent-red)" />
+              <span>LIVE COORDINATES</span>
               {gpsStatus === 'found' && (
-                <span style={{ background: '#10b981', color: 'white', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 700 }}>● LIVE</span>
+                <span style={{ background: '#00843D', color: 'white', fontSize: '0.7rem', padding: '3px 10px', borderRadius: '2px', fontWeight: 800 }}>● ACTIVE</span>
               )}
               {gpsStatus === 'acquiring' && (
-                <span style={{ background: '#f59e0b', color: 'white', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 700 }}>⟳ XÁC ĐỊNH...</span>
+                <span style={{ background: '#0064D2', color: 'white', fontSize: '0.7rem', padding: '3px 10px', borderRadius: '2px', fontWeight: 800 }}>⟳ SCANNING...</span>
               )}
             </div>
             {location && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                ~{Math.round(location.accuracy)}m chính xác
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                ACCURACY: ±{Math.round(location.accuracy)}M
               </div>
             )}
           </div>
@@ -322,9 +332,9 @@ export const SosPage = () => {
 
           {/* Coordinates */}
           {location && (
-            <div style={{ padding: '12px 20px', background: 'rgba(15,23,42,0.6)', display: 'flex', gap: '16px', fontSize: '0.8rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+            <div style={{ padding: '16px 24px', background: 'var(--bg-primary)', display: 'flex', gap: '20px', fontSize: '0.8rem', color: 'var(--text-secondary)', flexWrap: 'wrap', fontWeight: 600, borderTop: '1px solid #EEEEEE' }}>
               <span>📍 {location.lat.toFixed(6)}, {location.lng.toFixed(6)}</span>
-              <span>📏 {locationHistory.length} điểm • {totalDistance > 0 ? `${totalDistance.toFixed(0)}m di chuyển` : 'đứng yên'}</span>
+              <span>📏 {locationHistory.length} DATA POINTS • {totalDistance > 0 ? `${totalDistance.toFixed(0)}M TRACKED` : 'STATIONARY'}</span>
             </div>
           )}
 
@@ -370,38 +380,38 @@ export const SosPage = () => {
               </>
             ) : (
               <div>
-                <div style={{ marginBottom: '16px' }}>
-                  <CheckCircle2 size={52} color="#10b981" style={{ margin: '0 auto 12px', display: 'block' }} />
-                  <h3 style={{ color: '#10b981', fontSize: '1.1rem' }}>✓ SOS đã gửi!</h3>
+                <div style={{ marginBottom: '24px' }}>
+                  <CheckCircle2 size={52} color="#00843D" style={{ margin: '0 auto 16px', display: 'block' }} />
+                  <h3 style={{ color: '#00843D', fontSize: '1.25rem', fontWeight: 800 }}>SOS TRANSMITTED</h3>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
-                  <Clock size={14} />
-                  {formatElapsed(elapsed)} trước
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px', fontWeight: 600 }}>
+                  <Clock size={16} />
+                  {formatElapsed(elapsed)} ELAPSED
                 </div>
 
                 {/* Alert link */}
                 {publicToken && (
-                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#fca5a5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                      🔗 Link xem vị trí live
+                  <div style={{ background: '#F8F8F8', border: '2px solid var(--text-primary)', padding: '20px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+                      🔗 LIVE TRACKING LINK
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <input
                         readOnly
                         value={`${window.location.origin}/sos-alert/${publicToken}`}
-                        style={{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 10px', color: '#93c5fd', fontSize: '0.75rem', outline: 'none' }}
+                        style={{ flex: 1, background: '#FFFFFF', border: '1px solid #DDDDDD', padding: '10px', color: 'var(--accent-blue)', fontSize: '0.75rem', outline: 'none', fontWeight: 600 }}
                       />
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/sos-alert/${publicToken}`);
                         }}
-                        style={{ background: '#3b82f6', border: 'none', color: 'white', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+                        style={{ background: 'var(--text-primary)', border: 'none', color: 'white', padding: '10px 16px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
                       >
-                        Copy
+                        COPY
                       </button>
                     </div>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                      Liên hệ khẩn cấp nhận link này qua SMS/Email để theo dõi vị trí của bạn.
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '12px', fontWeight: 500, lineHeight: 1.4 }}>
+                      Gửi link này cho đội cứu hộ hoặc người thân để họ theo dõi vị trí trực tiếp của bạn.
                     </p>
                   </div>
                 )}
@@ -419,39 +429,41 @@ export const SosPage = () => {
 
           {/* Quick actions */}
           {location && (
-            <div className="glass-card" style={{ padding: '16px' }}>
-              <p style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                🗺️ Điều hướng nhanh
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <p style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                🗺️ NAVIGATION
               </p>
               <a
                 href={googleDirectionsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
-                  borderRadius: '10px', padding: '12px 14px',
-                  color: '#93c5fd', textDecoration: 'none', fontSize: '0.875rem',
-                  fontWeight: 600, marginBottom: '8px', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: 'var(--accent-blue)',
+                  padding: '16px',
+                  color: 'white', textDecoration: 'none', fontSize: '0.85rem',
+                  fontWeight: 700, marginBottom: '12px', transition: 'all 0.2s',
+                  borderRadius: '4px'
                 }}
               >
-                <Navigation size={16} />
-                Đường đi đến đây (Google Maps)
+                <Navigation size={18} />
+                GOOGLE MAPS DIRECTIONS
               </a>
               <a
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
-                  borderRadius: '10px', padding: '12px 14px',
-                  color: '#6ee7b7', textDecoration: 'none', fontSize: '0.875rem',
-                  fontWeight: 600, transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: 'var(--neutral)', border: '2px solid var(--text-primary)',
+                  padding: '16px',
+                  color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.85rem',
+                  fontWeight: 700, transition: 'all 0.2s',
+                  borderRadius: '4px'
                 }}
               >
-                <MapPin size={16} />
-                Xem vị trí trên Google Maps
+                <MapPin size={18} />
+                VIEW ON GOOGLE MAPS
               </a>
             </div>
           )}
