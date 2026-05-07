@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { KeyRound, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Lock, Check } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 
 export const ForgotPasswordPage = () => {
@@ -80,7 +80,7 @@ export const ForgotPasswordPage = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     const code = otp.join('');
-    if (code.length !== 6) { setError('Nhập đủ 6 số OTP.'); return; }
+    if (code.length !== 6) { setError('Vui lòng nhập đủ 6 số OTP.'); return; }
     if (newPassword.length < 6) { setError('Mật khẩu mới phải có ít nhất 6 ký tự.'); return; }
     if (newPassword !== confirmPassword) { setError('Mật khẩu xác nhận không khớp.'); return; }
     setLoading(true);
@@ -88,7 +88,7 @@ export const ForgotPasswordPage = () => {
     try {
       await axiosClient.post('/auth/reset-password', { email, otp: code, newPassword });
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 2500);
+      setTimeout(() => navigate('/auth'), 2500);
     } catch (err) {
       setError(err.response?.data?.message || 'OTP không hợp lệ hoặc đã hết hạn.');
       setOtp(['', '', '', '', '', '']);
@@ -98,149 +98,161 @@ export const ForgotPasswordPage = () => {
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px 12px 45px',
+    borderRadius: '12px',
+    border: '1px solid #E8E8E8',
+    background: '#FAFAFA',
+    fontSize: '0.95rem',
+    fontWeight: 500,
+    outline: 'none',
+    transition: 'all 0.2s'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '8px'
+  };
+
+  const iconStyle = {
+    position: 'absolute',
+    left: '16px',
+    top: '38px',
+    color: '#BBB'
+  };
+
   if (success) {
     return (
-      <div className="flex justify-center items-center" style={{ minHeight: '80vh' }}>
-        <div className="glass-card text-center" style={{ maxWidth: '440px', width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-            <CheckCircle2 size={64} color="#10b981" />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F9FA', padding: '20px' }}>
+        <div style={{ width: '100%', maxWidth: '440px', background: 'white', borderRadius: '24px', padding: '48px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}>
+          <div style={{ width: '80px', height: '80px', background: '#00C853', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: 'white', boxShadow: '0 8px 16px rgba(0,200,83,0.2)' }}>
+            <Check size={48} />
           </div>
-          <h2 style={{ color: '#10b981', marginBottom: '12px' }}>Đặt lại thành công!</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Mật khẩu đã được cập nhật. Đang chuyển đến đăng nhập...</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1A1A1A', marginBottom: '12px' }}>Thành công!</h2>
+          <p style={{ color: '#666', fontWeight: 500, lineHeight: 1.6 }}>Mật khẩu của bạn đã được cập nhật. Đang quay lại trang đăng nhập...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-center items-center" style={{ minHeight: '80vh', padding: '20px' }}>
-      <div className="glass-card" style={{ maxWidth: '440px', width: '100%' }}>
-
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%)', padding: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '480px', background: 'white', borderRadius: '24px', padding: '48px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', position: 'relative' }}>
+        
         {/* Step indicator */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center' }}>
-          {[1, 2].map(s => (
-            <React.Fragment key={s}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700,
-                background: step >= s ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-                color: step >= s ? 'white' : 'var(--text-secondary)',
-              }}>{s}</div>
-              {s < 2 && <div style={{ flex: 1, height: 2, background: step > s ? '#3b82f6' : 'rgba(255,255,255,0.1)', borderRadius: 2 }} />}
-            </React.Fragment>
-          ))}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '32px' }}>
+          <div style={{ width: '32px', height: '6px', borderRadius: '100px', background: step >= 1 ? '#007AFF' : '#EEE' }}></div>
+          <div style={{ width: '32px', height: '6px', borderRadius: '100px', background: step >= 2 ? '#007AFF' : '#EEE' }}></div>
         </div>
+
+        {error && (
+          <div style={{ background: '#FFF4F4', border: '1px solid #FF3B30', padding: '12px 16px', borderRadius: '12px', marginBottom: '24px', color: '#D32F2F', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ShieldAlert size={18} /> {error}
+          </div>
+        )}
 
         {step === 1 ? (
           <>
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', border: '2px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <Mail size={28} color="#3b82f6" />
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ width: '64px', height: '64px', background: 'rgba(0, 122, 255, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#007AFF' }}>
+                <Mail size={32} />
               </div>
-              <h2 style={{ fontSize: '1.4rem' }}>Quên mật khẩu?</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '8px' }}>
-                Nhập email của bạn để nhận mã OTP đặt lại mật khẩu.
-              </p>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>Quên mật khẩu?</h1>
+              <p style={{ color: '#888', fontWeight: 500, marginTop: '12px', lineHeight: 1.5 }}>Đừng lo lắng! Hãy nhập email của bạn, chúng tôi sẽ gửi mã OTP để đặt lại mật khẩu.</p>
             </div>
+
             <form onSubmit={handleSendOtp}>
-              <div className="input-group">
-                <label>Địa chỉ Email</label>
+              <div style={{ position: 'relative', marginBottom: '32px' }}>
+                <label style={labelStyle}>Địa chỉ Email</label>
+                <Mail size={18} style={iconStyle} />
                 <input
-                  type="email" className="input-control"
+                  type="email" style={inputStyle}
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError(''); }}
-                  placeholder="example@gmail.com"
+                  placeholder="name@example.com"
                   required
                 />
               </div>
-              {error && <div style={errorBoxStyle}>{error}</div>}
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px', padding: '14px' }} disabled={loading}>
-                {loading ? 'Đang gửi...' : <><Mail size={16} /> Gửi mã OTP</>}
+
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '16px', background: '#007AFF', color: 'white', borderRadius: '12px', border: 'none', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0, 122, 255, 0.25)', transition: 'all 0.3s' }} className="auth-btn">
+                {loading ? 'ĐANG GỬI MÃ...' : 'GỬI MÃ XÁC THỰC'}
               </button>
             </form>
           </>
         ) : (
           <>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', border: '2px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <KeyRound size={28} color="#3b82f6" />
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ width: '64px', height: '64px', background: 'rgba(0, 122, 255, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#007AFF' }}>
+                <KeyRound size={32} />
               </div>
-              <h2 style={{ fontSize: '1.4rem' }}>Đặt lại mật khẩu</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '6px' }}>
-                Mã OTP đã gửi đến <strong style={{ color: '#3b82f6' }}>{email}</strong>
-              </p>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>Xác thực OTP</h1>
+              <p style={{ color: '#888', fontWeight: 500, marginTop: '12px' }}>Mã xác thực đã được gửi tới <br/><strong style={{color: '#1A1A1A'}}>{email}</strong></p>
             </div>
+
             <form onSubmit={handleResetPassword}>
-              {/* OTP row */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px' }}>
+              {/* OTP Input Row */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '32px' }}>
                 {otp.map((d, i) => (
                   <input
                     key={i}
                     ref={el => inputRefs.current[i] = el}
-                    type="text" inputMode="numeric" maxLength={6}
+                    type="text" inputMode="numeric" maxLength={1}
                     value={d}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
                     onFocus={e => e.target.select()}
                     style={{
-                      width: '48px', height: '60px', textAlign: 'center',
-                      fontSize: '1.5rem', fontWeight: 700, borderRadius: '10px',
-                      border: `2px solid ${d ? '#3b82f6' : 'rgba(255,255,255,0.1)'}`,
-                      background: d ? 'rgba(59,130,246,0.15)' : 'rgba(15,23,42,0.5)',
-                      color: 'var(--text-primary)', outline: 'none',
-                      fontFamily: "'Courier New', monospace",
-                      boxShadow: d ? '0 0 10px rgba(59,130,246,0.25)' : 'none',
-                      transition: 'all 0.2s',
+                      width: '45px', height: '56px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 800,
+                      borderRadius: '12px', border: '2px solid #EEE', background: '#FAFAFA', outline: 'none',
+                      transition: 'all 0.2s', color: '#007AFF'
                     }}
+                    className="otp-input"
                   />
                 ))}
               </div>
 
-              {/* Resend */}
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <button type="button" onClick={handleResend} disabled={!canResend}
-                  style={{ background: 'none', border: 'none', cursor: canResend ? 'pointer' : 'default', color: canResend ? '#3b82f6' : 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {canResend ? '↩ Gửi lại OTP' : `Gửi lại sau ${resendTimer}s`}
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <button type="button" onClick={handleResend} disabled={!canResend} style={{ background: 'none', border: 'none', cursor: canResend ? 'pointer' : 'default', color: canResend ? '#007AFF' : '#BBB', fontSize: '0.85rem', fontWeight: 700 }}>
+                  {canResend ? 'Gửi lại mã ngay' : `Gửi lại mã sau ${resendTimer}s`}
                 </button>
               </div>
 
-              {/* New Password */}
-              <div className="input-group">
-                <label>Mật khẩu mới</label>
-                <input type="password" className="input-control"
-                  value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự" required />
-              </div>
-              <div className="input-group">
-                <label>Xác nhận mật khẩu</label>
-                <input type="password" className="input-control"
-                  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Nhập lại mật khẩu mới" required />
+              <div style={{ position: 'relative', marginBottom: '20px' }}>
+                <label style={labelStyle}>Mật khẩu mới</label>
+                <Lock size={18} style={iconStyle} />
+                <input type="password" style={inputStyle} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Tối thiểu 6 ký tự" required />
               </div>
 
-              {error && <div style={errorBoxStyle}>{error}</div>}
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', marginTop: '4px' }} disabled={loading}>
-                {loading ? 'Đang xử lý...' : <><KeyRound size={16} /> Đặt lại mật khẩu</>}
+              <div style={{ position: 'relative', marginBottom: '32px' }}>
+                <label style={labelStyle}>Xác nhận mật khẩu</label>
+                <Lock size={18} style={iconStyle} />
+                <input type="password" style={inputStyle} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Nhập lại mật khẩu mới" required />
+              </div>
+
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '16px', background: '#007AFF', color: 'white', borderRadius: '12px', border: 'none', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 24px rgba(0, 122, 255, 0.25)', transition: 'all 0.3s' }} className="auth-btn">
+                {loading ? 'ĐANG XỬ LÝ...' : 'ĐẶT LẠI MẬT KHẨU'}
               </button>
             </form>
           </>
         )}
 
-        <button onClick={() => step === 2 ? setStep(1) : navigate('/login')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', marginTop: '20px', padding: 0 }}>
-          <ArrowLeft size={16} /> {step === 2 ? 'Đổi email' : 'Quay lại đăng nhập'}
+        <button onClick={() => step === 2 ? setStep(1) : navigate('/auth')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, marginTop: '32px', width: '100%' }}>
+          <ArrowLeft size={18} /> {step === 2 ? 'Thay đổi địa chỉ email' : 'Quay lại đăng nhập'}
         </button>
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .auth-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .auth-btn:active { transform: translateY(0); }
+        input:focus { border-color: #007AFF !important; background: white !important; box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1); }
+        .otp-input:focus { border-color: #007AFF !important; box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1); }
+      `}} />
     </div>
   );
-};
-
-const errorBoxStyle = {
-  background: 'rgba(239,68,68,0.15)',
-  border: '1px solid rgba(239,68,68,0.3)',
-  borderRadius: '10px',
-  padding: '12px 16px',
-  color: '#fca5a5',
-  fontSize: '0.875rem',
-  marginBottom: '16px',
 };

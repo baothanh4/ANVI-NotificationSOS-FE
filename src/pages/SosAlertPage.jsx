@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  AlertTriangle, MapPin, Navigation, Phone, Clock,
+  AlertTriangle, Navigation, Phone, Clock,
   Heart, Droplets, Pill, FileWarning, User, CheckCircle2, RefreshCw,
-  LocateFixed, ShieldAlert, Crosshair, Zap
+  LocateFixed, ShieldAlert, Crosshair, Zap, ArrowRight, Map,
+  Facebook, Instagram, Linkedin, Twitter, Globe
 } from 'lucide-react';
 
 // Tải Leaflet lazy
@@ -18,6 +19,13 @@ const loadLeaflet = () =>
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.onload = () => resolve(window.L);
     document.head.appendChild(script);
+    const scriptRouting = document.createElement('script');
+    scriptRouting.src = 'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js';
+    document.head.appendChild(scriptRouting);
+    const linkRouting = document.createElement('link');
+    linkRouting.rel = 'stylesheet';
+    linkRouting.href = 'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css';
+    document.head.appendChild(linkRouting);
   });
 
 const POLL_INTERVAL_MS = 5000;
@@ -38,7 +46,7 @@ export const SosAlertPage = () => {
   const [map, setMap] = useState(null);
   const victimMarkerRef = useRef(null);
   const myMarkerRef = useRef(null);
-  const lineRef = useRef(null);
+  const routingControlRef = useRef(null);
 
   useEffect(() => {
     loadLeaflet().then(() => setLeafletReady(true));
@@ -107,14 +115,12 @@ export const SosAlertPage = () => {
     if (!leafletReady || loading || !mapRef.current || map) return;
     const L = window.L;
     
-    // Khởi tạo bản đồ
     const mapInstance = L.map(mapRef.current, {
       center: [10.7769, 106.7009],
       zoom: 15,
       zoomControl: false,
     });
     
-    // Theme bản đồ - Sử dụng Light Theme phù hợp với Transit Map
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO'
     }).addTo(mapInstance);
@@ -134,12 +140,12 @@ export const SosAlertPage = () => {
     };
   }, [map]);
 
-  // Cập nhật Markers
+  // Cập nhật Markers và Routing
   useEffect(() => {
     const L = window.L;
     if (!L || !map || !data?.lat) return;
 
-    const vLatlng = [parseFloat(data.lat), parseFloat(data.lng)];
+    const vLatlng = L.latLng(data.lat, data.lng);
 
     // 1. NẠN NHÂN (MÀU ĐỎ)
     const victimHtml = `
@@ -156,16 +162,9 @@ export const SosAlertPage = () => {
       victimMarkerRef.current.setLatLng(vLatlng);
     }
 
-    // Buộc Leaflet tính toán lại kích thước liên tục trong vài giây đầu
-    const refreshInterval = setInterval(() => {
-      if (map) map.invalidateSize();
-    }, 500);
-    
-    setTimeout(() => clearInterval(refreshInterval), 3000);
-
     // 2. NGƯỜI THÂN (MÀU XANH)
     if (myLocation) {
-      const myLatlng = [myLocation.lat, myLocation.lng];
+      const myLatlng = L.latLng(myLocation.lat, myLocation.lng);
       const rescuerHtml = `
         <div class="rescuer-marker">
           <div class="pulse-cyan"></div>
@@ -180,36 +179,43 @@ export const SosAlertPage = () => {
         myMarkerRef.current.setLatLng(myLatlng);
       }
 
-      // Vẽ đường nối giữa 2 người
-      if (!lineRef.current) {
-        lineRef.current = L.polyline([vLatlng, myLatlng], {
-          color: '#22d3ee', weight: 2, dashArray: '5, 10', opacity: 0.6
-        }).addTo(map);
-      } else {
-        lineRef.current.setLatLngs([vLatlng, myLatlng]);
+      // 3. ĐƯỜNG ĐI NGẮN NHẤT (Routing Machine)
+      if (L.Routing) {
+        if (!routingControlRef.current) {
+          routingControlRef.current = L.Routing.control({
+            waypoints: [myLatlng, vLatlng],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            show: false, // Ẩn bảng hướng dẫn chữ
+            createMarker: () => null, // Không tạo marker mặc định của routing
+            lineOptions: {
+              styles: [{ color: '#007AFF', opacity: 0.8, weight: 6 }]
+            }
+          }).addTo(map);
+        } else {
+          routingControlRef.current.setWaypoints([myLatlng, vLatlng]);
+        }
       }
-      
-      // Auto zoom để thấy cả 2
-      const bounds = L.latLngBounds([vLatlng, myLatlng]);
-      map.fitBounds(bounds, { padding: [50, 50] });
     } else {
       map.setView(vLatlng, 16);
     }
   }, [data, myLocation, map]);
 
-  if (loading) return <div style={pageStyle}><div className="loading-screen">SYSTEM INITIALIZING...</div></div>;
-  if (error || !data) return <div style={pageStyle}><div className="error-screen">LINK EXPIRED OR INVALID</div></div>;
+  if (loading) return <div style={pageStyle}><div className="loading-screen">HỆ THỐNG ĐANG KHỞI TẠO...</div></div>;
+  if (error || !data) return <div style={pageStyle}><div className="error-screen">LIÊN KẾT ĐÃ HẾT HẠN HOẶC KHÔNG HỢP LỆ</div></div>;
 
   return (
     <div style={pageStyle}>
       {/* Transit-style Header */}
       <div className="transit-header">
         <div className="header-brand">
-          <ShieldAlert size={24} color="#0064D2" />
+          <ShieldAlert size={24} color="#FF3B30" />
           <span className="brand-text">ANVI SOS EMERGENCY SYSTEM</span>
         </div>
         <div className="header-status">
-          LIVE TRACKING ACTIVATED: {data.victimName.toUpperCase()}
+          <span className="live-dot"></span> ĐANG THEO DÕI TRỰC TIẾP: {data.victimName.toUpperCase()}
         </div>
       </div>
 
@@ -227,49 +233,71 @@ export const SosAlertPage = () => {
             </div>
             
             <div className="profile-details">
-              <label className="metadata-label">VICTIM IDENTITY</label>
+              <label className="metadata-label">DANH TÍNH NẠN NHÂN</label>
               <h2>{data.victimName}</h2>
               <div className="phone-badge"><Phone size={14} /> {data.victimPhone}</div>
+              
+              {/* SOCIAL LINKS */}
+              {data.socialLinks && data.socialLinks.length > 0 && (
+                <div className="social-badges">
+                  {data.socialLinks.map(link => (
+                    <a 
+                      key={link.id} 
+                      href={link.url} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className={`social-icon ${link.platform}`}
+                      title={`Ghé thăm ${link.platform}`}
+                    >
+                      {link.platform === 'facebook' && <Facebook size={16} />}
+                      {link.platform === 'instagram' && <Instagram size={16} />}
+                      {link.platform === 'linkedin' && <Linkedin size={16} />}
+                      {link.platform === 'twitter' && <Twitter size={16} />}
+                      {link.platform !== 'facebook' && link.platform !== 'instagram' && link.platform !== 'linkedin' && link.platform !== 'twitter' && <Globe size={16} />}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           <div className="stats-grid">
             <div className="stat-box alert">
-              <label>STATUS</label>
-              <div className="value">EMERGENCY</div>
+              <label>TRẠNG THÁI</label>
+              <div className="value">NGUY HIỂM</div>
             </div>
             <div className="stat-box distance">
-              <label>DISTANCE</label>
+              <label>KHOẢNG CÁCH</label>
               <div className="value">
-                {distance ? (distance > 1000 ? `${(distance/1000).toFixed(1)} km` : `${Math.round(distance)} m`) : "Calculating..."}
+                {distance ? (distance > 1000 ? `${(distance/1000).toFixed(1)} km` : `${Math.round(distance)} m`) : "Đang tính..."}
               </div>
             </div>
           </div>
 
           <div className="info-section">
-            <h3 className="section-title"><Heart size={14} /> MEDICAL RECORDS</h3>
+            <h3 className="section-title"><Heart size={14} /> THÔNG TIN Y TẾ</h3>
             <div className="medical-list">
               <div className="med-item">
-                <div className="med-label">Blood Type</div>
-                <div className="med-value">{data.bloodType || 'N/A'}</div>
+                <div className="med-label">Nhóm máu</div>
+                <div className="med-value">{data.bloodType || 'Chưa rõ'}</div>
               </div>
               <div className="med-item">
-                <div className="med-label">Allergies</div>
-                <div className="med-value">{data.allergies || 'None'}</div>
+                <div className="med-label">Dị ứng</div>
+                <div className="med-value">{data.allergies || 'Không có'}</div>
               </div>
               <div className="med-item">
-                <div className="med-label">Conditions</div>
-                <div className="med-value">{data.conditions || 'None'}</div>
+                <div className="med-label">Bệnh lý</div>
+                <div className="med-value">{data.conditions || 'Không có'}</div>
               </div>
             </div>
           </div>
 
           <div className="actions">
-            <a href={data.googleMapsDirectionsUrl} className="btn-nav">
-              <Navigation size={20} /> GET DIRECTIONS
+            <a href={data.googleMapsDirectionsUrl} className="btn-nav" target="_blank" rel="noreferrer">
+              <Navigation size={20} /> CHỈ ĐƯỜNG (GOOGLE MAPS)
             </a>
             <a href={`tel:${data.victimPhone}`} className="btn-call">
-              <Phone size={18} /> EMERGENCY CALL
+              <Phone size={18} /> GỌI KHẨN CẤP
             </a>
           </div>
         </div>
@@ -278,17 +306,24 @@ export const SosAlertPage = () => {
         <div className="map-panel">
           <div className="map-frame">
             <div ref={mapRef} style={{ height: '100%', width: '100%', background: '#f0f0f0' }} />
+            
             <div className="map-overlay-top">
               <div className="coords">
                 LAT: {data.lat?.toFixed(6)} | LNG: {data.lng?.toFixed(6)}
+              </div>
+              <div className="refresh-time">
+                <RefreshCw size={12} className="spin" /> CẬP NHẬT: {lastRefresh?.toLocaleTimeString()}
               </div>
             </div>
 
             {/* BẢNG ĐỊA CHỈ NẠN NHÂN */}
             {data.locationText && (
               <div className="location-box">
-                <div className="loc-label">IDENTIFIED LOCATION:</div>
+                <div className="loc-label">VỊ TRÍ HIỆN TẠI CỦA NẠN NHÂN:</div>
                 <div className="loc-value">{data.locationText}</div>
+                <div className="routing-tip">
+                  <Map size={16} /> Đường kẻ màu xanh hiển thị lộ trình ngắn nhất đến mục tiêu.
+                </div>
               </div>
             )}
           </div>
@@ -296,129 +331,122 @@ export const SosAlertPage = () => {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
  
         :root {
-          --primary: #121212;
-          --secondary: #666666;
-          --tertiary: #0064D2;
-          --neutral: #F8F8F8;
+          --primary: #1A1A1A;
+          --secondary: #888888;
+          --accent: #007AFF;
+          --sos: #FF3B30;
           --surface: #FFFFFF;
-          --on-primary: #FFFFFF;
-          --alert-red: #E02020;
+          --background: #F2F2F7;
         }
 
-        body { margin: 0; background: var(--neutral); color: var(--primary); font-family: 'Work Sans', sans-serif; }
+        body { margin: 0; background: var(--background); color: var(--primary); font-family: 'Inter', sans-serif; overflow: hidden; }
 
-        .loading-screen {
-          height: 100vh; display: flex; align-items: center; justify-content: center;
-          color: var(--tertiary); font-weight: 700; letter-spacing: 1px;
+        /* Emergency Overlay Styles */
+        .emergency-alert-overlay {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999;
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+          backdrop-filter: blur(8px);
         }
+        .alert-card {
+          background: white; width: 100%; maxWidth: 500px; border-radius: 24px; padding: 40px;
+          text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+          animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .alert-header h2 { color: var(--sos); font-weight: 900; font-size: 1.8rem; margin: 16px 0; }
+        .alert-icon-pulse { color: var(--sos); animation: iconPulse 1s infinite; }
+        @keyframes iconPulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .victim-address-box {
+          background: #FFF4F4; border: 1px solid #FFE0E0; padding: 20px; border-radius: 16px;
+          display: flex; gap: 12px; align-items: center; text-align: left; margin: 24px 0;
+        }
+        .victim-address-box span { font-weight: 700; color: var(--sos); font-size: 1.1rem; line-height: 1.4; }
+        
+        .btn-confirm-alert {
+          width: 100%; padding: 20px; background: var(--sos); color: white; border: none;
+          border-radius: 16px; font-weight: 800; font-size: 1.1rem; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 12px;
+          box-shadow: 0 10px 20px rgba(255, 59, 48, 0.3); transition: all 0.2s;
+        }
+        .btn-confirm-alert:hover { transform: scale(1.02); filter: brightness(1.1); }
 
+        /* Main UI */
         .transit-header {
           display: flex; justify-content: space-between; align-items: center;
-          padding: 20px 40px; background: var(--surface);
-          border-bottom: 2px solid var(--primary);
+          padding: 16px 40px; background: white; border-bottom: 1px solid #E5E5E5;
         }
-
         .header-brand { display: flex; align-items: center; gap: 12px; }
-        .brand-text { font-weight: 800; letter-spacing: -0.02em; font-size: 1.1rem; color: var(--primary); }
-        .header-status { font-weight: 600; color: var(--secondary); font-size: 0.85rem; }
+        .brand-text { font-weight: 900; font-size: 1.1rem; letter-spacing: -0.02em; }
+        .header-status { font-weight: 700; color: var(--secondary); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+        .live-dot { width: 8px; height: 8px; background: var(--sos); border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-        .main-layout {
-          display: grid; grid-template-columns: 420px 1fr; height: calc(100vh - 74px);
-          padding: 0; gap: 0;
-        }
-
-        .side-panel {
-          background: var(--surface); border-right: 1px solid #DDDDDD;
-          padding: 40px; display: flex; flex-direction: column; gap: 40px;
-          overflow-y: auto;
-        }
-
-        .victim-profile { display: flex; flex-direction: column; gap: 20px; }
-        .avatar-frame {
-          width: 120px; height: 120px; background: var(--neutral); border-radius: 4px; overflow: hidden;
-          border: 1px solid #EEEEEE;
-        }
+        .main-layout { display: grid; grid-template-columns: 400px 1fr; height: calc(100vh - 65px); }
+        .side-panel { background: white; padding: 32px; border-right: 1px solid #E5E5E5; display: flex; flex-direction: column; gap: 32px; overflow-y: auto; }
+        
+        .avatar-frame { width: 100px; height: 100px; border-radius: 20px; overflow: hidden; background: #F2F2F7; }
         .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar-placeholder { 
-          width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-          font-size: 2.5rem; color: var(--secondary); background: #EEEEEE; font-weight: 700;
+        .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 900; color: #CCC; }
+        
+        .profile-details h2 { font-size: 2rem; font-weight: 900; margin: 8px 0; letter-spacing: -0.03em; }
+        .metadata-label { font-size: 0.7rem; font-weight: 800; color: var(--accent); letter-spacing: 0.05em; }
+        .phone-badge { font-weight: 600; color: var(--secondary); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        
+        .social-badges { display: flex; gap: 10px; margin-top: 4px; }
+        .social-icon { 
+          width: 32px; height: 32px; border-radius: 8px; display: flex; 
+          align-items: center; justify-content: center; color: white;
+          transition: transform 0.2s; text-decoration: none;
         }
+        .social-icon:hover { transform: translateY(-3px); }
+        .social-icon.facebook { background: #1877F2; }
+        .social-icon.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .social-icon.linkedin { background: #0077b5; }
+        .social-icon.twitter { background: #1DA1F2; }
+        .social-icon.other { background: #444; }
 
-        .metadata-label { font-size: 0.72rem; font-weight: 800; color: var(--tertiary); letter-spacing: 0.1em; }
-        .profile-details h2 { margin: 8px 0 4px; font-size: 2.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; }
-        .phone-badge { color: var(--secondary); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .stat-box { background: #F8F9FA; padding: 20px; border-radius: 16px; border: 1px solid #EEE; }
+        .stat-box label { font-size: 0.65rem; font-weight: 800; color: var(--secondary); display: block; margin-bottom: 8px; }
+        .stat-box .value { font-size: 1.25rem; font-weight: 800; }
+        .stat-box.alert .value { color: var(--sos); }
 
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #DDDDDD; border: 1px solid #DDDDDD; }
-        .stat-box { padding: 20px; background: var(--surface); }
-        .stat-box label { font-size: 0.72rem; font-weight: 800; color: var(--secondary); letter-spacing: 0.05em; display: block; margin-bottom: 8px; }
-        .stat-box .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-        .stat-box.alert .value { color: var(--alert-red); }
-
-        .section-title { font-size: 1rem; font-weight: 800; color: var(--primary); margin-bottom: 24px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
-        .medical-list { display: flex; flex-direction: column; gap: 20px; }
-        .med-item { display: flex; flex-direction: column; gap: 4px; }
-        .med-label { font-size: 0.72rem; font-weight: 800; color: var(--secondary); text-transform: uppercase; }
-        .med-value { font-size: 1.1rem; font-weight: 600; color: var(--primary); }
+        .section-title { font-size: 0.9rem; font-weight: 900; border-bottom: 2px solid #EEE; padding-bottom: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .med-item { margin-bottom: 16px; }
+        .med-label { font-size: 0.7rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; margin-bottom: 4px; }
+        .med-value { font-weight: 700; font-size: 1.05rem; }
 
         .actions { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
-        .btn-nav {
-          background: var(--tertiary); color: white; text-decoration: none;
-          padding: 20px; text-align: center; font-weight: 700;
-          border-radius: 4px; transition: 0.2s;
-        }
-        .btn-nav:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .btn-call {
-          background: var(--neutral); color: var(--primary); text-decoration: none;
-          padding: 16px; text-align: center; border: 1px solid #DDDDDD;
-          font-weight: 700; border-radius: 4px;
-        }
+        .btn-nav { background: var(--accent); color: white; padding: 18px; border-radius: 14px; text-decoration: none; font-weight: 800; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,122,255,0.2); }
+        .btn-call { background: white; color: var(--primary); padding: 18px; border-radius: 14px; text-decoration: none; font-weight: 800; text-align: center; border: 2px solid #E5E5E5; display: flex; align-items: center; justify-content: center; gap: 10px; }
 
-        .map-panel { position: relative; height: 100%; }
+        .map-panel { position: relative; }
         .map-frame { height: 100%; position: relative; }
-        .leaflet-container { height: 100% !important; width: 100% !important; background: #F0F0F0; }
+        .map-overlay-top { position: absolute; top: 24px; left: 24px; z-index: 1000; background: rgba(0,0,0,0.8); color: white; padding: 12px 20px; border-radius: 12px; font-family: monospace; font-size: 0.75rem; }
+        .refresh-time { margin-top: 4px; opacity: 0.7; display: flex; align-items: center; gap: 6px; }
+        .spin { animation: spin 2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .map-overlay-top {
-          position: absolute; top: 32px; left: 32px; z-index: 1000;
-          background: var(--primary); padding: 16px 24px; color: white;
-          font-family: 'monospace'; font-size: 0.75rem; border-radius: 2px;
-        }
+        .location-box { position: absolute; bottom: 32px; left: 32px; right: 32px; z-index: 1000; background: white; padding: 24px 32px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); border: 1px solid #EEE; }
+        .loc-label { font-size: 0.75rem; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
+        .loc-value { font-size: 1.25rem; font-weight: 800; line-height: 1.4; color: var(--primary); }
+        .routing-tip { margin-top: 12px; font-size: 0.85rem; color: var(--secondary); font-weight: 600; display: flex; align-items: center; gap: 8px; }
 
-        .location-box {
-          position: absolute; bottom: 40px; left: 40px; right: 40px; z-index: 1000;
-          background: var(--surface); border: 2px solid var(--primary);
-          padding: 24px 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .loc-label { font-size: 0.72rem; color: var(--tertiary); font-weight: 800; letter-spacing: 0.1em; margin-bottom: 8px; }
-        .loc-value { color: var(--primary); font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
+        /* Marker Styles */
+        .victim-marker, .rescuer-marker { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .pulse-red { position: absolute; width: 60px; height: 60px; background: rgba(255, 59, 48, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
+        .inner-red { width: 36px; height: 36px; background: var(--sos); border: 3px solid white; border-radius: 50%; color: white; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; z-index: 2; }
+        .pulse-cyan { position: absolute; width: 50px; height: 50px; background: rgba(0, 122, 255, 0.2); border-radius: 50%; animation: pulse 2s infinite; }
+        .inner-cyan { width: 28px; height: 28px; background: var(--accent); border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; z-index: 2; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
-        /* Marker Styles - Transit Inspired */
-        .victim-marker, .rescuer-marker { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-        
-        .pulse-red { position: absolute; inset: 0; border-radius: 50%; background: rgba(224,32,32,0.2); animation: pulse-r 2s infinite; }
-        .inner-red { 
-          width: 32px; height: 32px; border-radius: 50%; background: #E02020;
-          border: 3px solid white; color: white; font-weight: 800; display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; z-index: 2; font-size: 0.9rem;
-        }
-
-        .pulse-cyan { position: absolute; inset: 0; border-radius: 50%; background: rgba(0,100,210,0.2); animation: pulse-c 2s infinite; }
-        .inner-cyan { 
-          width: 24px; height: 24px; border-radius: 50%; background: var(--tertiary);
-          border: 3px solid white; display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; z-index: 2;
-        }
-
-        @keyframes pulse-r { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
-        @keyframes pulse-c { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
-
-        @media (max-width: 900px) {
-          .main-layout { grid-template-columns: 1fr; }
-          .side-panel { height: auto; padding: 24px; }
-          .transit-header { padding: 15px 20px; flex-direction: column; align-items: flex-start; gap: 8px; }
-        }
+        /* Hide leaflet routing machine info box */
+        .leaflet-routing-container { display: none !important; }
       `}</style>
     </div>
   );
@@ -426,6 +454,6 @@ export const SosAlertPage = () => {
 
 const pageStyle = {
   minHeight: '100vh',
-  background: '#F8F8F8',
-  overflowX: 'hidden'
+  background: '#F2F2F7',
+  overflow: 'hidden'
 };

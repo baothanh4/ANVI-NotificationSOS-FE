@@ -1,65 +1,68 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Layout } from './components/Layout';
-import { AuthPage } from './pages/AuthPage';
+
+// Import các trang cũ
 import { Dashboard } from './pages/Dashboard';
-import { ProfilePage } from './pages/ProfilePage';
+import { AuthPage } from './pages/AuthPage';
 import { SosPage } from './pages/SosPage';
+import { SosAlertPage } from './pages/SosAlertPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { PublicQrPage } from './pages/PublicQrPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { AccessRequestPage } from './pages/AccessRequestPage';
 import { ApprovalPage } from './pages/ApprovalPage';
 import { PrivateHealthRecordPage } from './pages/PrivateHealthRecordPage';
-import { VerifyEmailPage } from './pages/VerifyEmailPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { SosAlertPage } from './pages/SosAlertPage';
-import { SosListener } from './components/SosListener';
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  return children;
+// Component bảo vệ Route
+const PrivateRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/auth" />;
 };
 
-const App = () => {
+function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SosListener />
+    <AuthProvider>
+      <BrowserRouter>
         <Routes>
-          {/* Public Route for QR scan */}
-          <Route path="/qr/:shortCode" element={<PublicQrPage />} />
-          
-          {/* Phase 3: Access Request & Private Records */}
-          <Route path="/request-access/:userId" element={<AccessRequestPage />} />
-          <Route path="/grant/approve/:grantId" element={<ApprovalPage />} />
-          <Route path="/private-record/:grantToken" element={<PrivateHealthRecordPage />} />
-
-          {/* Email OTP Verification & Forgot Password (public, no layout) */}
+          {/* Public Routes */}
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/sos-alert/:token" element={<SosAlertPage />} />
+          <Route path="/public-qr/:shortCode" element={<PublicQrPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/access-request/:id" element={<AccessRequestPage />} />
+          <Route path="/approve/:id" element={<ApprovalPage />} />
 
-          {/* SOS Alert — Public, no auth, no layout (emergency contacts xem) */}
-          <Route path="/sos-alert/:token" element={<SosAlertPage />} />
+          {/* Private Routes */}
+          <Route path="/" element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          } />
+          <Route path="/sos" element={
+            <PrivateRoute>
+              <SosPage />
+            </PrivateRoute>
+          } />
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          } />
+          <Route path="/health-record/:id" element={
+            <PrivateRoute>
+              <PrivateHealthRecordPage />
+            </PrivateRoute>
+          } />
 
-          
-          <Route element={<Layout />}>
-            <Route path="/login" element={<AuthPage />} />
-            <Route path="/" element={
-              <ProtectedRoute><Dashboard /></ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute><ProfilePage /></ProtectedRoute>
-            } />
-            <Route path="/sos" element={
-              <ProtectedRoute><SosPage /></ProtectedRoute>
-            } />
-          </Route>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   );
-};
+}
 
 export default App;

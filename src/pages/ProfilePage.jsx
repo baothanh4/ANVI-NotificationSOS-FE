@@ -1,120 +1,251 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HealthRecordForm } from '../components/HealthRecordForm';
 import { EmergencyContactsManager } from '../components/EmergencyContactsManager';
 import { AuditLogViewer } from '../components/AuditLogViewer';
 import { MedicalDocumentsManager } from '../components/MedicalDocumentsManager';
 import { LockscreenGenerator } from '../components/LockscreenGenerator';
+import { SocialLinksManager } from '../components/SocialLinksManager';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Shield, PhoneCall, Heart, FileText, Smartphone } from 'lucide-react';
+import { 
+  User, Shield, PhoneCall, Heart, FileText, Smartphone, 
+  LogOut, Share2, Mail, Lock, CheckCircle, Edit3, X, Save
+} from 'lucide-react';
 
 export const ProfilePage = () => {
-  const { user } = useAuth();
-  
-  // Read initial tab from localStorage or default to 'account'
+  const { user, updateProfile, logout } = useAuth();
+  const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [pwdData, setPwdData] = useState({ current: '', new: '', confirm: '' });
+
   const savedTab = localStorage.getItem('profile_active_tab');
   const [activeTab, setActiveTab] = useState(savedTab || 'account');
 
-  // Clear the tab from localStorage after reading so it doesn't persist across fresh visits
-  // but keep it for navigation within the session if needed.
-  // Actually, let's just update localStorage whenever setActiveTab is called.
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     localStorage.setItem('profile_active_tab', tab);
   };
 
+  const startEditing = () => {
+    setEditData({
+      fullName: user.fullName || '',
+      phone: user.phone || '',
+      email: user.email || ''
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile(editData);
+      setIsEditing(false);
+    } catch (e) {
+      alert('Cập nhật thất bại. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (pwdData.new !== pwdData.confirm) {
+      alert("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+    alert("Tính năng đổi mật khẩu đang được kết nối với hệ thống...");
+    setShowPasswordChange(false);
+    setPwdData({ current: '', new: '', confirm: '' });
+  };
+
   if (!user) return <div className="container mt-8 text-center">Vui lòng đăng nhập.</div>;
 
   return (
-    <div className="container" style={{paddingTop: '40px', paddingBottom: '60px'}}>
-      <div className="mb-12 text-center">
-        <h1 style={{fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)'}}>PROFILE & SETTINGS</h1>
-        <p style={{color: 'var(--text-secondary)', fontWeight: 500, fontSize: '1rem', marginTop: '8px'}}>Quản lý thông tin cá nhân và thiết lập cứu hộ của bạn</p>
+    <div className="profile-wrapper">
+      <div className="container" style={{paddingTop: '60px', paddingBottom: '80px'}}>
+        
+        {/* Header Section */}
+        <div className="profile-header">
+          <h1>PROFILE & SETTINGS</h1>
+          <p>Quản lý thông tin bảo mật và thiết lập cứu hộ cá nhân của bạn</p>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="tab-navigation">
+          {[
+            { id: 'account', label: 'TÀI KHOẢN', icon: <User size={16} /> },
+            { id: 'health', label: 'HỒ SƠ Y TẾ', icon: <Heart size={16} /> },
+            { id: 'contacts', label: 'LIÊN HỆ', icon: <PhoneCall size={16} /> },
+            { id: 'documents', label: 'TÀI LIỆU', icon: <FileText size={16} /> },
+            { id: 'qr', label: 'QR CODE', icon: <Smartphone size={16} /> },
+            { id: 'audit', label: 'NHẬT KÝ', icon: <Shield size={16} /> },
+            { id: 'social', label: 'MẠNG XÃ HỘI', icon: <Share2 size={16} /> }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Main Content Card */}
+        <div className="glass-card main-profile-card">
+          {activeTab === 'account' && (
+            <div className="account-section">
+              <div className="account-top-bar">
+                <div className="user-intro">
+                  <div className="avatar-placeholder">
+                    {user.fullName ? user.fullName.charAt(0).toUpperCase() : <User size={40} />}
+                  </div>
+                  <div className="intro-text">
+                    <span className="welcome-tag">CHÀO MỪNG TRỞ LẠI,</span>
+                    <h3>{user.fullName ? user.fullName.toUpperCase() : 'USER'}</h3>
+                    <div className="user-id-badge">UID: #{user.id || '---'}</div>
+                  </div>
+                </div>
+                <div className="top-actions">
+                  {!isEditing ? (
+                    <>
+                      <button onClick={startEditing} className="edit-btn"><Edit3 size={18} /> EDIT PROFILE</button>
+                      <button onClick={handleLogout} className="logout-btn"><LogOut size={18} /> LOGOUT</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setIsEditing(false)} className="cancel-btn"><X size={18} /> CANCEL</button>
+                      <button onClick={handleSave} disabled={saving} className="save-btn">
+                        <Save size={18} /> {saving ? 'SAVING...' : 'SAVE CHANGES'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="profile-details-grid">
+                <div className="detail-field">
+                  <label><User size={14} /> FULL NAME</label>
+                  <input 
+                    readOnly={!isEditing} 
+                    value={isEditing ? editData.fullName : (user.fullName || '')} 
+                    onChange={(e) => setEditData({...editData, fullName: e.target.value})}
+                    placeholder="Chưa cập nhật tên"
+                  />
+                </div>
+                <div className="detail-field">
+                  <label><PhoneCall size={14} /> PHONE NUMBER</label>
+                  <input 
+                    readOnly={!isEditing} 
+                    value={isEditing ? editData.phone : (user.phone || '')} 
+                    onChange={(e) => setEditData({...editData, phone: e.target.value})}
+                  />
+                </div>
+                <div className="detail-field">
+                  <label><Mail size={14} /> EMAIL ADDRESS</label>
+                  <input 
+                    readOnly={!isEditing} 
+                    value={isEditing ? editData.email : (user.email || '')} 
+                    onChange={(e) => setEditData({...editData, email: e.target.value})}
+                  />
+                </div>
+                <div className="detail-field">
+                  <label><CheckCircle size={14} /> ACCOUNT STATUS</label>
+                  <div className="status-box-verified">VERIFIED & PROTECTED</div>
+                </div>
+              </div>
+
+              {/* Password Section */}
+              <div className="password-management-area">
+                {!showPasswordChange ? (
+                  <button className="pw-trigger-btn" onClick={() => setShowPasswordChange(true)}>
+                    <Lock size={18} /> THAY ĐỔI MẬT KHẨU TRUY CẬP
+                  </button>
+                ) : (
+                  <form onSubmit={handleChangePassword} className="password-form-box">
+                    <h4>CẬP NHẬT MẬT KHẨU MỚI</h4>
+                    <div className="pwd-grid">
+                      <input type="password" placeholder="Mật khẩu hiện tại" required value={pwdData.current} onChange={e => setPwdData({...pwdData, current: e.target.value})} />
+                      <input type="password" placeholder="Mật khẩu mới" required value={pwdData.new} onChange={e => setPwdData({...pwdData, new: e.target.value})} />
+                      <input type="password" placeholder="Xác nhận mật khẩu mới" required value={pwdData.confirm} onChange={e => setPwdData({...pwdData, confirm: e.target.value})} />
+                    </div>
+                    <div className="pwd-actions">
+                      <button type="button" onClick={() => setShowPasswordChange(false)} className="cancel-pw">HỦY BỎ</button>
+                      <button type="submit" className="confirm-pw">CẬP NHẬT NGAY</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'health' && <HealthRecordForm />}
+          {activeTab === 'contacts' && <EmergencyContactsManager />}
+          {activeTab === 'audit' && <AuditLogViewer />}
+          {activeTab === 'documents' && <MedicalDocumentsManager />}
+          {activeTab === 'qr' && <LockscreenGenerator />}
+          {activeTab === 'social' && <SocialLinksManager />}
+        </div>
       </div>
 
-      <div style={{display: 'flex', justifyContent: 'center', gap: '0', marginBottom: '40px', flexWrap: 'wrap', borderBottom: '2px solid var(--text-primary)'}}>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'account' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'account' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('account')}
-        >
-          TÀI KHOẢN
-        </button>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'health' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'health' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('health')}
-        >
-          HỒ SƠ Y TẾ
-        </button>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'contacts' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'contacts' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('contacts')}
-        >
-          LIÊN HỆ KHẨN CẤP
-        </button>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'documents' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'documents' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('documents')}
-        >
-          TÀI LIỆU
-        </button>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'qr' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'qr' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('qr')}
-        >
-          QR CODE
-        </button>
-        <button 
-          className="btn" 
-          style={{background: 'transparent', color: activeTab === 'audit' ? 'var(--accent-blue)' : 'var(--text-secondary)', border: 'none', borderBottom: activeTab === 'audit' ? '4px solid var(--accent-blue)' : '4px solid transparent', padding: '16px 24px', borderRadius: '0', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}
-          onClick={() => handleTabChange('audit')}
-        >
-          LỊCH SỬ TRUY CẬP
-        </button>
-      </div>
+      <style>{`
+        .profile-wrapper { min-height: 100vh; background: #F2F2F7; }
+        .profile-header { text-align: center; margin-bottom: 48px; }
+        .profile-header h1 { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.04em; color: #1C1C1E; margin: 0; }
+        .profile-header p { color: #8E8E93; font-weight: 500; font-size: 1.1rem; margin-top: 10px; }
 
-      <div className="glass-card">
-        {activeTab === 'account' && (
-          <div style={{maxWidth: '600px', margin: '0 auto'}}>
-             <div style={{display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid #EEEEEE'}}>
-                <div style={{width: '100px', height: '100px', background: 'var(--accent-blue)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'white'}}>
-                  <User size={48} style={{margin: '0 auto'}} />
-                </div>
-                <div>
-                  <h3 style={{fontSize: '1.5rem', marginBottom: '4px'}}>{user.fullName || 'Unknown User'}</h3>
-                  <p style={{fontWeight: 600, color: 'var(--accent-blue)'}}>USER ID: #{user.id || 'N/A'}</p>
-                </div>
-             </div>
+        .tab-navigation { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+        .tab-btn { 
+          background: white; border: none; padding: 14px 20px; border-radius: 12px;
+          font-weight: 800; font-size: 0.75rem; color: #8E8E93; cursor: pointer;
+          display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .tab-btn.active { background: var(--accent-blue); color: white; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,122,255,0.2); }
+        .tab-btn:hover:not(.active) { background: #E5E5EA; color: #1C1C1E; }
 
-             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px'}}>
-                <div className="input-group">
-                  <label style={{fontWeight: 800, fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Full Name</label>
-                  <input readOnly value={user.fullName || ''} className="input-control" />
-                </div>
-                <div className="input-group">
-                  <label style={{fontWeight: 800, fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Phone Number</label>
-                  <input readOnly value={user.phone || ''} className="input-control" />
-                </div>
-                <div className="input-group">
-                  <label style={{fontWeight: 800, fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Email Address</label>
-                  <input readOnly value={user.email || ''} className="input-control" />
-                </div>
-                <div className="input-group">
-                  <label style={{fontWeight: 800, fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Account Status</label>
-                  <div style={{padding: '14px 16px', background: '#F0FDF4', border: '2px solid #00843D', color: '#00843D', fontWeight: 800, fontSize: '0.85rem', borderRadius: '4px'}}>VERIFIED</div>
-                </div>
-             </div>
-          </div>
-        )}
-        {activeTab === 'health' && <HealthRecordForm />}
-        {activeTab === 'contacts' && <EmergencyContactsManager />}
-        {activeTab === 'audit' && <AuditLogViewer />}
-        {activeTab === 'documents' && <MedicalDocumentsManager />}
-        {activeTab === 'qr' && <LockscreenGenerator />}
-      </div>
+        .main-profile-card { padding: 48px !important; max-width: 1000px; margin: 0 auto; border: none !important; box-shadow: 0 20px 50px rgba(0,0,0,0.08) !important; }
+        
+        .account-top-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 40px; border-bottom: 1px solid #F2F2F7; margin-bottom: 40px; }
+        .user-intro { display: flex; align-items: center; gap: 24px; }
+        .avatar-placeholder { width: 88px; height: 88px; background: var(--accent-blue); color: white; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 950; }
+        .welcome-tag { font-size: 0.7rem; font-weight: 900; color: var(--accent-blue); letter-spacing: 0.1em; }
+        .intro-text h3 { margin: 4px 0; font-size: 1.8rem; font-weight: 900; color: #1C1C1E; }
+        .user-id-badge { display: inline-block; padding: 4px 12px; background: #F2F2F7; border-radius: 6px; font-weight: 800; font-size: 0.75rem; color: #8E8E93; }
+
+        .top-actions { display: flex; gap: 12px; }
+        .edit-btn, .save-btn { background: #1C1C1E; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .logout-btn { background: white; color: #FF3B30; border: 2px solid #FF3B30; padding: 10px 24px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .cancel-btn { background: #F2F2F7; color: #1C1C1E; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+
+        .profile-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .detail-field label { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 900; color: #8E8E93; margin-bottom: 10px; letter-spacing: 0.05em; }
+        .detail-field input { width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #F2F2F7; background: #F8F9FA; font-weight: 700; font-size: 1rem; color: #1C1C1E; transition: all 0.2s; }
+        .detail-field input:focus { border-color: var(--accent-blue); background: white; outline: none; }
+        .status-box-verified { padding: 16px; background: #F0FFF4; border: 2px solid #34C759; color: #166534; font-weight: 900; font-size: 0.9rem; border-radius: 12px; text-align: center; }
+
+        .password-management-area { margin-top: 56px; padding-top: 40px; border-top: 1px solid #F2F2F7; }
+        .pw-trigger-btn { background: none; border: 2px dashed #E5E5EA; color: #8E8E93; padding: 20px; width: 100%; border-radius: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s; }
+        .pw-trigger-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: #F0F7FF; }
+
+        .password-form-box { background: #F8F9FA; padding: 32px; border-radius: 20px; border: 1px solid #E5E5EA; }
+        .password-form-box h4 { margin: 0 0 24px; font-size: 1rem; font-weight: 900; }
+        .pwd-grid { display: grid; gap: 16px; }
+        .pwd-grid input { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #DDD; font-weight: 600; }
+        .pwd-actions { display: flex; gap: 16px; margin-top: 24px; }
+        .confirm-pw { flex: 1; background: var(--accent-blue); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+        .cancel-pw { background: none; border: none; color: #8E8E93; font-weight: 700; cursor: pointer; }
+      `}</style>
     </div>
   );
 };

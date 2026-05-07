@@ -16,29 +16,52 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      const decoded = parseJwt(token);
-      if (decoded && decoded.sub) {
-        setUser({ token, id: decoded.sub });
-      } else {
-        setUser({ token });
+    const initAuth = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          // Fetch full user profile from backend
+          const profile = await axiosClient.get('/users/profile');
+          setUser({ ...profile, token });
+        } catch (e) {
+          console.error('Failed to fetch profile', e);
+          const decoded = parseJwt(token);
+          if (decoded && decoded.sub) {
+            setUser({ token, id: decoded.sub });
+          } else {
+            setUser({ token });
+          }
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
   const login = async (phone, password) => {
     const res = await axiosClient.post('/auth/login', { phoneOrEmail: phone, password });
     localStorage.setItem('access_token', res.accessToken);
     localStorage.setItem('refresh_token', res.refreshToken);
-    const decoded = parseJwt(res.accessToken);
-    setUser({ token: res.accessToken, id: decoded?.sub });
+    
+    // Fetch full profile after login
+    try {
+      const profile = await axiosClient.get('/users/profile');
+      setUser({ ...profile, token: res.accessToken });
+    } catch (e) {
+      const decoded = parseJwt(res.accessToken);
+      setUser({ token: res.accessToken, id: decoded?.sub });
+    }
   };
 
   const register = async (data) => {
     const res = await axiosClient.post('/auth/register', data);
     return res;
+  };
+
+  const updateProfile = async (data) => {
+    const updatedUser = await axiosClient.put('/users/profile', data);
+    setUser(prev => ({ ...prev, ...updatedUser }));
+    return updatedUser;
   };
 
   const logout = () => {
@@ -48,10 +71,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
+
