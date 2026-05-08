@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import { AlertTriangle, PhoneCall, Heart, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, PhoneCall, Heart, ShieldAlert, User, Share2, Globe, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 
 export const PublicQrPage = () => {
   const { shortCode } = useParams();
@@ -15,6 +15,8 @@ export const PublicQrPage = () => {
   const [manualAddress, setManualAddress] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [sosPayloadTemp, setSosPayloadTemp] = useState(null);
+  const [socialLinks, setSocialLinks] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     const fetchInfo = async () => {
@@ -26,9 +28,11 @@ export const PublicQrPage = () => {
         }
         
         const userId = resolveRes.userId;
-        const [healthRes, contactsRes] = await Promise.all([
+        const [healthRes, contactsRes, socialRes, userRes] = await Promise.all([
           axiosClient.get(`/health/users/${userId}`),
-          axiosClient.get(`/contacts/users/${userId}`)
+          axiosClient.get(`/contacts/users/${userId}`),
+          axiosClient.get(`/social/my?userId=${userId}`),
+          axiosClient.get(`/users/public-info/${userId}`) // I'll need to create this endpoint or use a similar one
         ]);
         
         setData({ 
@@ -37,6 +41,8 @@ export const PublicQrPage = () => {
           health: healthRes, 
           contacts: contactsRes 
         });
+        setSocialLinks(socialRes.filter(l => l.visible));
+        setUserProfile(userRes);
       } catch (err) {
         setError('Không thể tải thông tin y tế khẩn cấp.');
       }
@@ -203,9 +209,32 @@ export const PublicQrPage = () => {
       </div>
 
       <div className="text-center mb-8">
-        <h1 style={{fontSize: '1.5rem', fontWeight: 'bold'}}>THÔNG TIN Y TẾ</h1>
-        <p style={{color: 'var(--text-secondary)'}}>Vui lòng cung cấp thông tin này cho nhân viên y tế.</p>
+        <h1 style={{fontSize: '2rem', fontWeight: 'bold'}}>{userProfile?.fullName || 'THÔNG TIN CỨU HỘ'}</h1>
+        {userProfile?.dateOfBirth && (
+          <p style={{fontSize: '1.1rem', color: 'var(--text-secondary)'}}>
+            Ngày sinh: {new Date(userProfile.dateOfBirth).toLocaleDateString('vi-VN')}
+          </p>
+        )}
+        <p style={{color: 'var(--text-secondary)', marginTop: '8px'}}>Vui lòng cung cấp thông tin này cho nhân viên y tế.</p>
       </div>
+
+      {socialLinks.length > 0 && (
+        <div className="glass-card mb-4" style={{borderTop: '4px solid #10b981', background: 'var(--glass-bg)', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
+          <h3 className="flex items-center gap-4 mb-4" style={{fontSize: '1.25rem', fontWeight: 'bold'}}><Share2 color="#10b981" /> Mạng xã hội</h3>
+          <div className="flex flex-wrap gap-4">
+            {socialLinks.map(link => (
+              <a key={link.id} href={link.url} target="_blank" rel="noreferrer" style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '20px', textDecoration: 'none', color: 'var(--text-primary)', fontWeight: '600'}}>
+                {link.platform === 'facebook' && <Facebook size={18} />}
+                {link.platform === 'instagram' && <Instagram size={18} />}
+                {link.platform === 'linkedin' && <Linkedin size={18} />}
+                {link.platform === 'twitter' && <Twitter size={18} />}
+                {link.platform === 'other' && <Globe size={18} />}
+                {link.platform.toUpperCase()}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="glass-card mb-4" style={{borderTop: '4px solid #ef4444', background: 'var(--glass-bg)', padding: '20px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
         <h3 className="flex items-center gap-4 mb-4" style={{fontSize: '1.25rem', fontWeight: 'bold'}}><Heart color="#ef4444" /> Chi tiết sức khoẻ</h3>

@@ -6,6 +6,7 @@ import { AuditLogViewer } from '../components/AuditLogViewer';
 import { MedicalDocumentsManager } from '../components/MedicalDocumentsManager';
 import { LockscreenGenerator } from '../components/LockscreenGenerator';
 import { SocialLinksManager } from '../components/SocialLinksManager';
+import { NfcLinkManager } from '../components/NfcLinkManager';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   User, Shield, PhoneCall, Heart, FileText, Smartphone, 
@@ -25,6 +26,7 @@ export const ProfilePage = () => {
 
   const savedTab = localStorage.getItem('profile_active_tab');
   const [activeTab, setActiveTab] = useState(savedTab || 'account');
+  const [activeSubTab, setActiveSubTab] = useState('lockscreen');
 
   const handleLogout = () => {
     logout();
@@ -40,12 +42,29 @@ export const ProfilePage = () => {
     setEditData({
       fullName: user.fullName || '',
       phone: user.phone || '',
-      email: user.email || ''
+      email: user.email || '',
+      bio: user.bio || '',
+      dateOfBirth: user.dateOfBirth || ''
     });
     setIsEditing(true);
   };
 
   const handleSave = async () => {
+    // Age Validation (16+)
+    if (editData.dateOfBirth) {
+      const birthDate = new Date(editData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 16) {
+        alert("Bạn phải trên 16 tuổi để sử dụng tính năng này.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       await updateProfile(editData);
@@ -144,6 +163,16 @@ export const ProfilePage = () => {
                   />
                 </div>
                 <div className="detail-field">
+                  <label><User size={14} /> DATE OF BIRTH</label>
+                  <input 
+                    type={isEditing ? "date" : "text"}
+                    readOnly={!isEditing} 
+                    value={isEditing ? editData.dateOfBirth : (user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('vi-VN') : '')} 
+                    onChange={(e) => setEditData({...editData, dateOfBirth: e.target.value})}
+                    placeholder="DD/MM/YYYY"
+                  />
+                </div>
+                <div className="detail-field">
                   <label><PhoneCall size={14} /> PHONE NUMBER</label>
                   <input 
                     readOnly={!isEditing} 
@@ -157,6 +186,16 @@ export const ProfilePage = () => {
                     readOnly={!isEditing} 
                     value={isEditing ? editData.email : (user.email || '')} 
                     onChange={(e) => setEditData({...editData, email: e.target.value})}
+                  />
+                </div>
+                <div className="detail-field full-width">
+                  <label><FileText size={14} /> GIỚI THIỆU BẢN THÂN (BIO)</label>
+                  <textarea 
+                    readOnly={!isEditing} 
+                    value={isEditing ? editData.bio : (user.bio || '')} 
+                    onChange={(e) => setEditData({...editData, bio: e.target.value})}
+                    placeholder="Viết vài câu giới thiệu về bạn cho hồ sơ NFC..."
+                    rows={3}
                   />
                 </div>
                 <div className="detail-field">
@@ -193,7 +232,17 @@ export const ProfilePage = () => {
           {activeTab === 'contacts' && <EmergencyContactsManager />}
           {activeTab === 'audit' && <AuditLogViewer />}
           {activeTab === 'documents' && <MedicalDocumentsManager />}
-          {activeTab === 'qr' && <LockscreenGenerator />}
+          {activeTab === 'qr' && (
+            <div className="qr-nfc-tabs">
+              <div className="sub-tab-nav">
+                <button className={`sub-btn ${activeSubTab === 'lockscreen' ? 'active' : ''}`} onClick={() => setActiveSubTab('lockscreen')}>LOCKSCREEN QR</button>
+                <button className={`sub-btn ${activeSubTab === 'nfc' ? 'active' : ''}`} onClick={() => setActiveSubTab('nfc')}>NFC PROFILE</button>
+              </div>
+              <div className="sub-tab-content">
+                {activeSubTab === 'lockscreen' ? <LockscreenGenerator /> : <NfcLinkManager />}
+              </div>
+            </div>
+          )}
           {activeTab === 'social' && <SocialLinksManager />}
         </div>
       </div>
@@ -230,9 +279,17 @@ export const ProfilePage = () => {
 
         .profile-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
         .detail-field label { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 900; color: #8E8E93; margin-bottom: 10px; letter-spacing: 0.05em; }
-        .detail-field input { width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #F2F2F7; background: #F8F9FA; font-weight: 700; font-size: 1rem; color: #1C1C1E; transition: all 0.2s; }
-        .detail-field input:focus { border-color: var(--accent-blue); background: white; outline: none; }
+        .detail-field input, .detail-field textarea { width: 100%; padding: 16px; border-radius: 12px; border: 2px solid #F2F2F7; background: #F8F9FA; font-weight: 700; font-size: 1rem; color: #1C1C1E; transition: all 0.2s; }
+        .detail-field textarea { resize: none; font-family: inherit; }
+        .detail-field input:focus, .detail-field textarea:focus { border-color: var(--accent-blue); background: white; outline: none; }
+        .detail-field.full-width { grid-column: span 2; }
         .status-box-verified { padding: 16px; background: #F0FFF4; border: 2px solid #34C759; color: #166534; font-weight: 900; font-size: 0.9rem; border-radius: 12px; text-align: center; }
+
+        .qr-nfc-tabs { width: 100%; }
+        .sub-tab-nav { display: flex; gap: 16px; margin-bottom: 32px; border-bottom: 2px solid #F2F2F7; padding-bottom: 12px; }
+        .sub-btn { background: none; border: none; font-weight: 900; font-size: 0.8rem; color: #8E8E93; cursor: pointer; padding: 8px 12px; position: relative; }
+        .sub-btn.active { color: var(--accent-blue); }
+        .sub-btn.active::after { content: ''; position: absolute; bottom: -14px; left: 0; width: 100%; height: 4px; background: var(--accent-blue); border-radius: 2px; }
 
         .password-management-area { margin-top: 56px; padding-top: 40px; border-top: 1px solid #F2F2F7; }
         .pw-trigger-btn { background: none; border: 2px dashed #E5E5EA; color: #8E8E93; padding: 20px; width: 100%; border-radius: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s; }

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Shield, Heart, PhoneCall, AlertTriangle, ArrowRight, Activity,
-  Smartphone, Clock, BookOpen, Navigation, X, BellRing, ChevronRight
+  Smartphone, Clock, BookOpen, Navigation, X, BellRing, ChevronRight, Share2
 } from 'lucide-react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
@@ -180,6 +180,14 @@ export const Dashboard = () => {
                   <div className="feature-text">
                      <h3>CẨM NANG SƠ CỨU</h3>
                      <p>Hướng dẫn khẩn cấp chuẩn y tế</p>
+                  </div>
+                  <ArrowRight size={20} />
+               </div>
+               <div className="feature-card blog" onClick={() => navigate('/blog')} style={{background: 'linear-gradient(135deg, #5856D6, #AF52DE)'}}>
+                  <div className="feature-icon"><Share2 size={32} /></div>
+                  <div className="feature-text">
+                     <h3>ANVI BLOG</h3>
+                     <p>Kiến thức phòng ngừa & Chia sẻ</p>
                   </div>
                   <ArrowRight size={20} />
                </div>

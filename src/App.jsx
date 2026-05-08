@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Layout } from './components/Layout';
 
 // Import các trang cũ
 import { Dashboard } from './pages/Dashboard';
@@ -9,11 +10,15 @@ import { SosPage } from './pages/SosPage';
 import { SosAlertPage } from './pages/SosAlertPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PublicQrPage } from './pages/PublicQrPage';
+import { PublicProfilePage } from './pages/PublicProfilePage';
+import { BlogPage } from './pages/BlogPage';
+import { BlogPostDetailPage } from './pages/BlogPostDetailPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { AccessRequestPage } from './pages/AccessRequestPage';
 import { ApprovalPage } from './pages/ApprovalPage';
 import { PrivateHealthRecordPage } from './pages/PrivateHealthRecordPage';
+import { AdminPage } from './pages/AdminPage';
 
 // Component bảo vệ Route
 const PrivateRoute = ({ children }) => {
@@ -29,33 +34,46 @@ function App() {
           {/* Public Routes */}
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/sos-alert/:token" element={<SosAlertPage />} />
-          <Route path="/public-qr/:shortCode" element={<PublicQrPage />} />
+          <Route path="/public-info/:shortCode" element={<PublicQrPage />} />
+          <Route path="/p/:shortCode" element={<PublicProfilePage />} />
+          <Route path="/sos-alert" element={<SosAlertPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/access-request/:id" element={<AccessRequestPage />} />
           <Route path="/approve/:id" element={<ApprovalPage />} />
-
-          {/* Private Routes */}
-          <Route path="/" element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } />
-          <Route path="/sos" element={
-            <PrivateRoute>
-              <SosPage />
-            </PrivateRoute>
-          } />
-          <Route path="/profile" element={
-            <PrivateRoute>
-              <ProfilePage />
-            </PrivateRoute>
-          } />
-          <Route path="/health-record/:id" element={
-            <PrivateRoute>
-              <PrivateHealthRecordPage />
-            </PrivateRoute>
-          } />
+          {/* Routes with Layout */}
+          <Route element={<Layout />}>
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:id" element={<BlogPostDetailPage />} />
+            
+            <Route path="/admin" element={
+              <PrivateRoute>
+                <AdminPage />
+              </PrivateRoute>
+            } />
+            
+            {/* Private Routes */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            } />
+            <Route path="/sos" element={
+              <PrivateRoute>
+                <SosPage />
+              </PrivateRoute>
+            } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            } />
+            <Route path="/health-record/:id" element={
+              <PrivateRoute>
+                <PrivateHealthRecordPage />
+              </PrivateRoute>
+            } />
+          </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { HeartPulse, LogOut, User, Activity, AlertCircle } from 'lucide-react';
+import { HeartPulse, LogOut, User, Activity, AlertCircle, BookOpen, Shield } from 'lucide-react';
 
 export const Layout = () => {
   const { user, logout } = useAuth();
@@ -25,6 +25,8 @@ export const Layout = () => {
               <>
                 <Link to="/" className="nav-link"><Activity size={18} /> DASHBOARD</Link>
                 <Link to="/profile" className="nav-link"><User size={18} /> PROFILE</Link>
+                <Link to="/blog" className="nav-link"><BookOpen size={18} /> BLOG</Link>
+                {user?.role === 'ADMIN' && <Link to="/admin" className="nav-link"><Shield size={18} /> ADMIN</Link>}
                 <Link to="/sos" className="nav-link" style={{color: 'var(--accent-red)'}}><AlertCircle size={18} /> SOS</Link>
                 <button onClick={handleLogout} className="btn btn-outline" style={{padding: '8px 16px', fontSize: '0.75rem', fontWeight: 800}}>
                   <LogOut size={16} /> LOGOUT

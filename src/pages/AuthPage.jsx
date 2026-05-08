@@ -19,23 +19,28 @@ export const AuthPage = () => {
   if (user) return <Navigate to="/" />;
 
   const validateField = async (name, value) => {
-    let errs = { ...validationErrors };
+    let currentError = null;
     
-    if (name === 'email') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (name === 'fullName') {
+      const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/;
       if (!value) {
-        delete errs.email;
+        currentError = 'Vui lòng nhập họ tên';
+      } else if (!nameRegex.test(value)) {
+        currentError = 'Họ tên không được chứa ký tự đặc biệt';
+      }
+    }
+
+    if (name === 'email') {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+      if (!value) {
+        currentError = 'Vui lòng nhập email';
       } else if (!emailRegex.test(value)) {
-        errs.email = 'Email không hợp lệ';
+        currentError = 'Email không hợp lệ (VD: name@example.com)';
       } else {
         setCheckingAvailability(prev => ({ ...prev, email: true }));
         try {
           const res = await axiosClient.get(`/auth/check-availability?email=${value}`);
-          if (!res.available) {
-            errs.email = 'Email này đã được sử dụng';
-          } else {
-            delete errs.email;
-          }
+          if (!res.available) currentError = 'Email này đã được sử dụng';
         } catch (e) {
           console.error(e);
         } finally {
@@ -45,31 +50,33 @@ export const AuthPage = () => {
     }
 
     if (name === 'phone') {
-      const phoneRegex = /^[0-9]{10,11}$/;
+      const phoneRegex = /^(03|05|07|08|09)[0-9]{8}$/;
       if (!value) {
-        delete errs.phone;
+        currentError = 'Vui lòng nhập số điện thoại';
       } else if (!phoneRegex.test(value)) {
-        errs.phone = 'SĐT phải từ 10-11 số';
+        currentError = 'Số điện thoại không hợp lệ (VN)';
       } else if (!isLogin) {
         setCheckingAvailability(prev => ({ ...prev, phone: true }));
         try {
           const res = await axiosClient.get(`/auth/check-availability?phone=${value}`);
-          if (!res.available) {
-            errs.phone = 'SĐT này đã được sử dụng';
-          } else {
-            delete errs.phone;
-          }
+          if (!res.available) currentError = 'SĐT này đã được sử dụng';
         } catch (e) {
           console.error(e);
         } finally {
           setCheckingAvailability(prev => ({ ...prev, phone: false }));
         }
-      } else {
-        delete errs.phone;
       }
     }
 
-    setValidationErrors(errs);
+    setValidationErrors(prev => {
+      const newErrs = { ...prev };
+      if (currentError) {
+        newErrs[name] = currentError;
+      } else {
+        delete newErrs[name];
+      }
+      return newErrs;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -216,12 +223,17 @@ export const AuthPage = () => {
                 <label style={labelStyle}>Họ và tên</label>
                 <User size={18} style={iconStyle} />
                 <input
-                  type="text" style={inputStyle}
+                  type="text" style={{...inputStyle, border: validationErrors.fullName ? '1px solid #FF3B30' : '1px solid #E8E8E8'}}
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, fullName: e.target.value });
+                    validateField('fullName', e.target.value);
+                  }}
+                  onBlur={(e) => validateField('fullName', e.target.value)}
                   placeholder="Nguyễn Văn A"
                   required
                 />
+                {validationErrors.fullName && <div style={{fontSize: '0.7rem', color: '#D32F2F', marginTop: '4px', fontWeight: 600}}>{validationErrors.fullName}</div>}
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -233,7 +245,7 @@ export const AuthPage = () => {
                     value={formData.email}
                     onChange={(e) => {
                       setFormData({ ...formData, email: e.target.value });
-                      if (validationErrors.email) validateField('email', e.target.value);
+                      validateField('email', e.target.value);
                     }}
                     onBlur={(e) => validateField('email', e.target.value)}
                     placeholder="name@example.com"
@@ -263,7 +275,7 @@ export const AuthPage = () => {
                     value={formData.phone}
                     onChange={(e) => {
                       setFormData({ ...formData, phone: e.target.value });
-                      if (validationErrors.phone) validateField('phone', e.target.value);
+                      validateField('phone', e.target.value);
                     }}
                     onBlur={(e) => validateField('phone', e.target.value)}
                     placeholder="0912345678"
