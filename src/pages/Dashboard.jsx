@@ -3,7 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Shield, Heart, PhoneCall, AlertTriangle, ArrowRight, Activity,
-  Smartphone, Clock, BookOpen, Navigation, X, BellRing, ChevronRight, Share2
+  Smartphone, Clock, BookOpen, Navigation, X, BellRing, ChevronRight, Share2,
+  Search, AlertCircle
 } from 'lucide-react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
@@ -14,6 +15,7 @@ export const Dashboard = () => {
   const [sosAlert, setSosAlert] = useState(null);
   const [showFirstAid, setShowFirstAid] = useState(false);
   const [selectedAid, setSelectedAid] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const firstAidGuides = [
     {
@@ -39,6 +41,17 @@ export const Dashboard = () => {
       ]
     },
     {
+      id: 'fainting',
+      title: 'Xử lý khi bị Ngất xỉu',
+      icon: <Activity size={24} />,
+      steps: [
+        'Đặt nạn nhân nằm ngửa, chân nâng cao khoảng 30cm.',
+        'Nới lỏng quần áo, thắt lưng.',
+        'Kiểm tra nhịp thở, không đổ nước vào mặt nạn nhân.',
+        'Gọi cấp cứu nếu nạn nhân không tỉnh sau 1 phút.'
+      ]
+    },
+    {
       id: 'burns',
       title: 'Xử lý Vết bỏng',
       icon: <Clock size={24} />,
@@ -58,6 +71,39 @@ export const Dashboard = () => {
         'Giữ chặt cho đến khi máu ngừng chảy.',
         'Nâng vùng bị thương cao hơn tim nếu có thể.',
         'Băng bó lại nhưng không quá chặt làm tắc mạch.'
+      ]
+    },
+    {
+      id: 'fracture',
+      title: 'Chấn thương xương khớp',
+      icon: <Shield size={24} />,
+      steps: [
+        'Giữ cố định vùng bị thương, không cố nắn lại xương.',
+        'Chườm lạnh để giảm sưng và đau.',
+        'Sử dụng nẹp hoặc băng ép nhẹ nhàng.',
+        'Chuyển nạn nhân đến cơ sở y tế gần nhất.'
+      ]
+    },
+    {
+      id: 'drowning',
+      title: 'Sơ cứu Đuối nước',
+      icon: <AlertCircle size={24} />,
+      steps: [
+        'Đưa nạn nhân lên mặt đất an toàn.',
+        'Kiểm tra nhịp thở và mạch đập.',
+        'Nếu không thở, thực hiện hô hấp nhân tạo ngay.',
+        'Giữ ấm cơ thể và gọi cấp cứu khẩn cấp.'
+      ]
+    },
+    {
+      id: 'poisoning',
+      title: 'Ngộ độc thực phẩm',
+      icon: <AlertTriangle size={24} />,
+      steps: [
+        'Ngừng ăn thực phẩm nghi ngờ ngay lập tức.',
+        'Uống nhiều nước hoặc oresol để tránh mất nước.',
+        'Không tự ý uống thuốc cầm tiêu chảy.',
+        'Đến bệnh viện nếu đau bụng dữ dội hoặc sốt cao.'
       ]
     }
   ];
@@ -222,18 +268,32 @@ export const Dashboard = () => {
               <div className="modal-header-aid">
                 <BookOpen size={32} />
                 <div className="modal-title-group"><h3>CẨM NANG SƠ CỨU NHANH</h3></div>
-                <button className="close-btn" onClick={() => {setShowFirstAid(false); setSelectedAid(null);}}><X size={20} /></button>
+                <button className="close-btn" onClick={() => {setShowFirstAid(false); setSelectedAid(null); setSearchQuery('');}}><X size={20} /></button>
               </div>
               <div className="modal-body scrollable">
                 {!selectedAid ? (
-                  <div className="guide-list">
-                    {firstAidGuides.map(guide => (
-                      <div key={guide.id} className="guide-item" onClick={() => setSelectedAid(guide)}>
-                        <div className="guide-icon-box">{guide.icon}</div>
-                        <span className="guide-name">{guide.title}</span>
-                        <ChevronRight size={20} />
-                      </div>
-                    ))}
+                  <div className="guide-list-wrapper">
+                    <div className="search-box-aid">
+                      <Search size={20} />
+                      <input 
+                        type="text" 
+                        placeholder="Tìm kiếm hướng dẫn (VD: CPR, bỏng...)" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="guide-list">
+                      {firstAidGuides.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(guide => (
+                        <div key={guide.id} className="guide-item" onClick={() => setSelectedAid(guide)}>
+                          <div className="guide-icon-box">{guide.icon}</div>
+                          <span className="guide-name">{guide.title}</span>
+                          <ChevronRight size={20} />
+                        </div>
+                      ))}
+                      {firstAidGuides.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                        <div className="no-results">Không tìm thấy hướng dẫn phù hợp.</div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="guide-detail">
@@ -309,21 +369,76 @@ export const Dashboard = () => {
         .modal-card { background: white; width: 100%; max-width: 520px; border-radius: 28px; overflow: hidden; box-shadow: 0 50px 100px rgba(0,0,0,0.4); animation: slideIn 0.4s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
         
-        .modal-header-sos { background: #FF3B30; padding: 32px; color: white; display: flex; gap: 20px; align-items: center; }
-        .modal-header-aid { background: #34C759; padding: 32px; color: white; display: flex; gap: 20px; align-items: center; }
-        .sos-icon-ring { width: 64px; height: 64px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulseRing 1.5s infinite; }
+        .modal-header-sos { background: #FF3B30; padding: 24px 32px; color: white; display: flex; gap: 20px; align-items: center; }
+        .modal-header-aid { background: linear-gradient(135deg, #34C759, #28a745); padding: 24px 32px; color: white; display: flex; gap: 20px; align-items: center; }
+        .sos-icon-ring { width: 56px; height: 56px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulseRing 1.5s infinite; }
         @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 70% { box-shadow: 0 0 0 20px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
 
-        .modal-body { padding: 32px; }
+        .close-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; margin-left: auto; }
+        .close-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .modal-body { padding: 32px; background: #fff; }
+        .modal-body.scrollable { max-height: 70vh; overflow-y: auto; }
+        
         .location-badge { background: #FFF1F0; padding: 16px; border-radius: 14px; display: flex; gap: 12px; align-items: center; color: #FF3B30; font-weight: 800; border: 1px solid #FFD8D6; margin-bottom: 24px; }
-        .action-btn { width: 100%; background: #FF3B30; color: white; padding: 22px; border: none; border-radius: 14px; font-weight: 900; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.3s; }
+        .action-btn { width: 100%; background: #FF3B30; color: white; padding: 20px; border: none; border-radius: 14px; font-weight: 900; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.3s; }
         .action-btn:hover { background: #D70015; transform: scale(1.02); }
 
         .guide-list { display: grid; gap: 14px; }
-        .guide-item { display: flex; align-items: center; gap: 16px; padding: 22px; background: #F2F2F7; border-radius: 18px; cursor: pointer; transition: all 0.2s; }
+        .guide-item { display: flex; align-items: center; gap: 16px; padding: 20px; background: #F2F2F7; border-radius: 18px; cursor: pointer; transition: all 0.2s; }
         .guide-item:hover { background: #E5E5EA; transform: scale(1.02); }
-        .guide-icon-box { background: white; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #34C759; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .guide-name { flex: 1; font-weight: 800; font-size: 1.1rem; color: #1C1C1E; }
+        .guide-icon-box { background: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #34C759; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .guide-name { flex: 1; font-weight: 800; font-size: 1.05rem; color: #1C1C1E; }
+
+        .guide-detail { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f0f5; border: none; border-radius: 100px; color: #555; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-bottom: 24px; transition: all 0.2s; }
+        .back-btn:hover { background: #e5e5ea; color: #1c1c1e; transform: translateX(-4px); }
+        
+        .guide-detail h4 { font-size: 1.6rem; font-weight: 900; color: #1c1c1e; margin: 0 0 24px 0; letter-spacing: -0.02em; }
+        .steps-container { display: flex; flex-direction: column; gap: 16px; }
+        .step-row { display: flex; gap: 20px; background: #f8f9fa; padding: 20px; border-radius: 20px; border: 1px solid #eee; align-items: flex-start; transition: all 0.2s; }
+        .step-row:hover { background: #fff; border-color: #34C759; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transform: translateY(-2px); }
+        .step-num { width: 34px; height: 34px; background: #34C759; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; font-size: 0.95rem; }
+        .step-row p { margin: 0; color: #333; font-size: 1.05rem; line-height: 1.6; font-weight: 500; }
+
+        .search-box-aid {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #F2F2F7;
+          padding: 14px 20px;
+          border-radius: 16px;
+          margin-bottom: 24px;
+          border: 2px solid transparent;
+          transition: all 0.3s;
+        }
+        .search-box-aid:focus-within {
+          background: white;
+          border-color: #34C759;
+          box-shadow: 0 8px 24px rgba(52, 199, 89, 0.1);
+        }
+        .search-box-aid input {
+          flex: 1;
+          background: none;
+          border: none;
+          outline: none;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1C1C1E;
+          width: 100%;
+        }
+        .search-box-aid input::placeholder { color: #8E8E93; }
+        .search-box-aid svg { color: #8E8E93; }
+
+        .no-results {
+          text-align: center;
+          padding: 40px 20px;
+          color: #8E8E93;
+          font-weight: 600;
+          font-style: italic;
+        }
       `}</style>
     </div>
   );

@@ -12,6 +12,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { PublicQrPage } from './pages/PublicQrPage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
 import { BlogPage } from './pages/BlogPage';
+import { CreateBlogPage } from './pages/CreateBlogPage';
 import { BlogPostDetailPage } from './pages/BlogPostDetailPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -44,6 +45,7 @@ function App() {
           {/* Routes with Layout */}
           <Route element={<Layout />}>
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/create" element={<CreateBlogPage />} />
             <Route path="/blog/:id" element={<BlogPostDetailPage />} />
             
             <Route path="/admin" element={

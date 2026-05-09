@@ -1,62 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import { ChevronLeft, Clock, User, Share2, Tag, BookOpen, Shield } from 'lucide-react';
+import { ChevronLeft, Clock, User, Share2, Tag, BookOpen, Shield, Check } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export const BlogPostDetailPage = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [approving, setApproving] = useState(false);
+
+  const fetchPost = async () => {
+    setLoading(true);
+    try {
+      const data = await axiosClient.get(`/blog/${id}`);
+      setPost(data);
+    } catch (err) {
+      console.error('Failed to fetch blog post', err);
+      // Fallback logic...
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPost = async () => {
-      try {
-        const data = await axiosClient.get(`/blog/${id}`);
-        setPost(data);
-      } catch (err) {
-        console.error('Failed to fetch blog post', err);
-        // Fallback for demo
-        setPost({
-          id,
-          title: id === '1' ? 'Cách xử lý khi gặp người bị ngất xỉu đột ngột' : 'Hướng dẫn chi tiết kỹ năng phòng ngừa',
-          content: `
-            <p>Ngất xỉu là tình trạng mất ý thức tạm thời, thường do lưu lượng máu đến não bị giảm sút. Đây là một tình huống khẩn cấp thường gặp trong đời sống hàng ngày.</p>
-            
-            <h3>1. Nhận biết các dấu hiệu báo trước</h3>
-            <ul>
-              <li>Hoa mắt, chóng mặt, nhìn mờ.</li>
-              <li>Vã mồ hôi lạnh, da tái nhợt.</li>
-              <li>Buồn nôn hoặc cảm giác nóng bừng đột ngột.</li>
-            </ul>
-
-            <h3>2. Cách xử lý ngay lập tức</h3>
-            <p>Khi thấy một người có dấu hiệu sắp ngất hoặc đã ngất, hãy thực hiện các bước sau:</p>
-            <ol>
-              <li><strong>Đặt người bệnh nằm ngửa:</strong> Nếu không có chấn thương, hãy đặt họ nằm trên mặt phẳng cứng và nâng chân cao khoảng 30cm để máu dồn về não.</li>
-              <li><strong>Kiểm tra đường thở:</strong> Đảm bảo người bệnh vẫn đang thở bình thường. Nới lỏng quần áo, thắt lưng hoặc cà vạt.</li>
-              <li><strong>Kích thích nhẹ:</strong> Có thể gọi to hoặc vỗ nhẹ vào vai. Tránh đổ nước vào mặt hoặc cho ngửi các chất kích thích mạnh.</li>
-            </ol>
-
-            <h3>3. Khi nào cần gọi cấp cứu?</h3>
-            <p>Hãy gọi ngay 115 hoặc nhấn nút SOS trên ứng dụng ANVI nếu:</p>
-            <ul>
-              <li>Người bệnh không tỉnh lại sau 1 phút.</li>
-              <li>Người bệnh có biểu hiện co giật hoặc khó thở.</li>
-              <li>Người bệnh là phụ nữ mang thai hoặc người cao tuổi.</li>
-            </ul>
-          `,
-          category: 'Sơ cứu',
-          authorName: 'ANVI Expert',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=1200',
-          createdAt: new Date().toISOString()
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPost();
   }, [id]);
+
+  const handleApprove = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn duyệt bài viết này?')) return;
+    setApproving(true);
+    try {
+      await axiosClient.patch(`/blog/${id}/approve`);
+      alert('Đã duyệt bài viết thành công!');
+      fetchPost(); // Refresh post status
+    } catch (err) {
+      alert('Duyệt bài thất bại.');
+    } finally {
+      setApproving(false);
+    }
+  };
 
   if (loading) return <div style={{textAlign: 'center', padding: '100px'}}>Đang tải nội dung...</div>;
   if (!post) return <div style={{textAlign: 'center', padding: '100px'}}>Không tìm thấy bài viết.</div>;
@@ -74,7 +59,7 @@ export const BlogPostDetailPage = () => {
           <ChevronLeft size={20} /> QUAY LẠI BLOG
         </button>
         
-        {axiosClient.defaults.headers.common['Authorization'] && (
+        {user?.role === 'ADMIN' && (
           <button 
             onClick={() => navigate('/admin')}
             style={{
@@ -100,7 +85,25 @@ export const BlogPostDetailPage = () => {
         }}>
           {post.category}
         </div>
-        <h1 style={{fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '20px'}}>{post.title}</h1>
+        
+        <div style={{display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '20px'}}>
+          <h1 style={{fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.2, margin: 0}}>{post.title}</h1>
+          {user?.role === 'ADMIN' && post.status === 'PENDING' && (
+            <button 
+              onClick={handleApprove}
+              disabled={approving}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--success)', 
+                color: 'white', border: 'none', borderRadius: '12px', padding: '8px 16px',
+                cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem',
+                boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)',
+                height: 'fit-content'
+              }}
+            >
+              <Check size={16} /> {approving ? 'ĐANG DUYỆT...' : 'DUYỆT BÀI'}
+            </button>
+          )}
+        </div>
         
         <div style={{display: 'flex', flexWrap: 'wrap', gap: '24px', color: 'var(--text-secondary)', fontSize: '0.9rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '24px'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
