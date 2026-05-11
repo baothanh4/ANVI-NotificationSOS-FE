@@ -2,444 +2,294 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Shield, Heart, PhoneCall, AlertTriangle, ArrowRight, Activity,
-  Smartphone, Clock, BookOpen, Navigation, X, BellRing, ChevronRight, Share2,
-  Search, AlertCircle
+  Shield, BookOpen, Activity, Clock, Search, MapPin, 
+  Phone, AlertCircle, ShieldCheck, LogOut, Facebook, 
+  Youtube, Instagram, Mail, ChevronRight, ArrowRight
 } from 'lucide-react';
-import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
+import axiosClient from '../api/axiosClient';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [sosAlert, setSosAlert] = useState(null);
-  const [showFirstAid, setShowFirstAid] = useState(false);
-  const [selectedAid, setSelectedAid] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const firstAidGuides = [
-    {
-      id: 'cpr',
-      title: 'Ép tim ngoài lồng ngực (CPR)',
-      icon: <Activity size={24} />,
-      steps: [
-        'Đặt 2 tay chồng lên nhau ở giữa ngực nạn nhân.',
-        'Ấn mạnh và nhanh (100-120 lần/phút).',
-        'Ấn sâu ít nhất 5cm và để ngực nảy lên hết.',
-        'Tiếp tục cho đến khi có sự giúp đỡ chuyên nghiệp.'
-      ]
-    },
-    {
-      id: 'heimlich',
-      title: 'Hóc dị vật (Heimlich)',
-      icon: <AlertTriangle size={24} />,
-      steps: [
-        'Đứng sau nạn nhân, ôm quanh eo.',
-        'Nắm một tay thành nắm đấm, đặt trên rốn một chút.',
-        'Ấn mạnh vào trong và lên trên đột ngột.',
-        'Lặp lại cho đến khi dị vật văng ra.'
-      ]
-    },
-    {
-      id: 'fainting',
-      title: 'Xử lý khi bị Ngất xỉu',
-      icon: <Activity size={24} />,
-      steps: [
-        'Đặt nạn nhân nằm ngửa, chân nâng cao khoảng 30cm.',
-        'Nới lỏng quần áo, thắt lưng.',
-        'Kiểm tra nhịp thở, không đổ nước vào mặt nạn nhân.',
-        'Gọi cấp cứu nếu nạn nhân không tỉnh sau 1 phút.'
-      ]
-    },
-    {
-      id: 'burns',
-      title: 'Xử lý Vết bỏng',
-      icon: <Clock size={24} />,
-      steps: [
-        'Xả nước mát lên vết bỏng ít nhất 10-20 phút.',
-        'Không dùng đá lạnh, kem đánh răng hoặc mỡ.',
-        'Che nhẹ bằng băng gạc sạch hoặc màng bọc thực phẩm.',
-        'Đến cơ sở y tế nếu vết bỏng lớn hoặc phồng rộp.'
-      ]
-    },
-    {
-      id: 'bleeding',
-      title: 'Cầm máu vết thương',
-      icon: <Heart size={24} />,
-      steps: [
-        'Dùng gạc sạch ấn trực tiếp lên vết thương.',
-        'Giữ chặt cho đến khi máu ngừng chảy.',
-        'Nâng vùng bị thương cao hơn tim nếu có thể.',
-        'Băng bó lại nhưng không quá chặt làm tắc mạch.'
-      ]
-    },
-    {
-      id: 'fracture',
-      title: 'Chấn thương xương khớp',
-      icon: <Shield size={24} />,
-      steps: [
-        'Giữ cố định vùng bị thương, không cố nắn lại xương.',
-        'Chườm lạnh để giảm sưng và đau.',
-        'Sử dụng nẹp hoặc băng ép nhẹ nhàng.',
-        'Chuyển nạn nhân đến cơ sở y tế gần nhất.'
-      ]
-    },
-    {
-      id: 'drowning',
-      title: 'Sơ cứu Đuối nước',
-      icon: <AlertCircle size={24} />,
-      steps: [
-        'Đưa nạn nhân lên mặt đất an toàn.',
-        'Kiểm tra nhịp thở và mạch đập.',
-        'Nếu không thở, thực hiện hô hấp nhân tạo ngay.',
-        'Giữ ấm cơ thể và gọi cấp cứu khẩn cấp.'
-      ]
-    },
-    {
-      id: 'poisoning',
-      title: 'Ngộ độc thực phẩm',
-      icon: <AlertTriangle size={24} />,
-      steps: [
-        'Ngừng ăn thực phẩm nghi ngờ ngay lập tức.',
-        'Uống nhiều nước hoặc oresol để tránh mất nước.',
-        'Không tự ý uống thuốc cầm tiêu chảy.',
-        'Đến bệnh viện nếu đau bụng dữ dội hoặc sốt cao.'
-      ]
-    }
-  ];
+  const [publicPosts, setPublicPosts] = useState([]);
 
   useEffect(() => {
-    if (!user) return;
-    const socket = new SockJS('http://localhost:8081/ws-sos');
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = null;
-    stompClient.connect({}, () => {
-      stompClient.subscribe('/topic/sos-alerts', (message) => {
-        const payload = JSON.parse(message.body);
-        if (payload.type === 'SOS_ALERT') {
-          if (payload.victimName === user.fullName) return;
-          setSosAlert(payload);
-        } else if (payload.type === 'SOS_SAFE' && sosAlert?.publicToken === payload.publicToken) {
-          setSosAlert(null);
-        }
-      });
-    }, (error) => {
-      console.error('WebSocket connection error:', error);
-    });
-    return () => { if (stompClient.connected) stompClient.disconnect(); };
-  }, [user, sosAlert]);
+    const fetchPublicPosts = async () => {
+      try {
+        const data = await axiosClient.get('/blog');
+        setPublicPosts(data.slice(0, 3));
+      } catch (err) {
+        console.error('Failed to fetch public posts', err);
+      }
+    };
+    fetchPublicPosts();
+  }, []);
 
-  const handleNavigateProfile = (tab) => {
-    localStorage.setItem('profile_active_tab', tab);
-    navigate('/profile');
-  };
-
-  if (!user) return <div className="container mt-8 text-center">Vui lòng đăng nhập.</div>;
-
-  return (
-    <div className="dashboard-wrapper">
-      <div className={`main-content ${sosAlert || showFirstAid ? 'content-blur' : ''}`}>
-        <div className="container" style={{paddingTop: '60px', paddingBottom: '80px'}}>
-          
-          <div className="welcome-section">
-            <h1 className="welcome-text">WELCOME BACK, <span className="highlight">{(user.fullName || 'User').toUpperCase()}</span></h1>
-            <p className="sub-text">Hệ thống cứu hộ ANVI đang ở trạng thái sẵn sàng.</p>
-          </div>
-
-          <div className="dashboard-grid">
-            {/* 1. SOS MAIN CARD */}
-            <div className="glass-card sos-card" onClick={() => navigate('/sos')}>
-               <div className="card-header">
-                  <div className="sos-icon-container"><AlertTriangle size={40} /></div>
-                  <div className="header-labels">
-                     <span className="label-top">SYSTEM STATUS: ACTIVE</span>
-                     <span className="label-main">SOS EMERGENCY</span>
-                  </div>
-               </div>
-               <p className="card-desc">Trong trường hợp khẩn cấp, hãy kích hoạt tín hiệu SOS ngay tại đây để nhận được sự hỗ trợ nhanh nhất.</p>
-               <div className="sos-btn">TRUY CẬP TRẠM SOS <ArrowRight size={20} /></div>
+  // --- LANDING PAGE FOR GUESTS / PUBLIC ---
+  const renderLanding = () => (
+    <div className="landing-page" style={{animation: 'fadeIn 0.8s ease-out'}}>
+      {/* Hero Section */}
+      <section className="hero-slider" style={{
+        height: '600px',
+        background: `linear-gradient(rgba(0,45,94,0.7), rgba(0,45,94,0.4)), url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=2053')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        color: 'white',
+        marginBottom: '60px'
+      }}>
+        <div className="medical-container">
+          <div style={{maxWidth: '700px'}}>
+            <div style={{display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.2)', padding: '8px 20px', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 800, marginBottom: '30px', backdropFilter: 'blur(10px)'}}>
+              <ShieldCheck size={18} /> HỆ THỐNG AN TOÀN SỐ 1 VIỆT NAM
             </div>
-
-            {/* 2. PROFILE SUMMARY */}
-            <div className="glass-card profile-summary-card">
-               <div className="card-header-simple">
-                  <h2>HỒ SƠ CỦA BẠN</h2>
-                  <Link to="/profile" className="detail-link">CHI TIẾT <ArrowRight size={16} /></Link>
-               </div>
-               <div className="info-list-horizontal">
-                  <div className="info-badge">
-                     <Heart size={18} color="var(--accent-red)" />
-                     <div><span className="badge-label">BLOOD</span><div className="badge-val">A+</div></div>
-                  </div>
-                  <div className="info-badge">
-                     <PhoneCall size={18} color="var(--accent-blue)" />
-                     <div><span className="badge-label">CONTACTS</span><div className="badge-val">03 NGƯỜI</div></div>
-                  </div>
-                  <div className="info-badge">
-                     <Shield size={18} color="#34C759" />
-                     <div><span className="badge-label">STATUS</span><div className="badge-val">SECURE</div></div>
-                  </div>
-               </div>
-               <div className="profile-footer-msg">Hệ thống đã mã hóa và bảo mật thông tin y tế của bạn.</div>
-            </div>
-
-            {/* 3. MANAGEMENT TOOLS (CLickable Cards) */}
-            <div className="management-row">
-               <div className="glass-card tool-card" onClick={() => handleNavigateProfile('health')}>
-                  <div className="tool-icon-box"><Activity size={28} color="var(--accent-blue)" /></div>
-                  <div className="tool-info">
-                     <h4>HỒ SƠ Y TẾ</h4>
-                     <p>Cập nhật bệnh lý, dị ứng...</p>
-                  </div>
-                  <ChevronRight size={20} className="tool-arrow" />
-               </div>
-               <div className="glass-card tool-card" onClick={() => handleNavigateProfile('qr')}>
-                  <div className="tool-icon-box"><Smartphone size={28} color="var(--accent-blue)" /></div>
-                  <div className="tool-info">
-                     <h4>QR CODE</h4>
-                     <p>Quản lý mã định danh cứu hộ</p>
-                  </div>
-                  <ChevronRight size={20} className="tool-arrow" />
-               </div>
-               <div className="glass-card tool-card" onClick={() => handleNavigateProfile('audit')}>
-                  <div className="tool-icon-box"><Shield size={28} color="var(--accent-blue)" /></div>
-                  <div className="tool-info">
-                     <h4>NHẬT KÝ</h4>
-                     <p>Lịch sử hoạt động bảo mật</p>
-                  </div>
-                  <ChevronRight size={20} className="tool-arrow" />
-               </div>
-            </div>
-
-            {/* 4. PREMIUM FEATURES */}
-            <div className="features-grid">
-               <div className="feature-card journey" onClick={() => navigate('/safe-journey')}>
-                  <div className="feature-icon"><Clock size={32} /></div>
-                  <div className="feature-text">
-                     <h3>SAFE JOURNEY</h3>
-                     <p>Hành trình an toàn - Tự động bảo vệ</p>
-                  </div>
-                  <ArrowRight size={20} />
-               </div>
-               <div className="feature-card aid" onClick={() => setShowFirstAid(true)}>
-                  <div className="feature-icon"><BookOpen size={32} /></div>
-                  <div className="feature-text">
-                     <h3>CẨM NANG SƠ CỨU</h3>
-                     <p>Hướng dẫn khẩn cấp chuẩn y tế</p>
-                  </div>
-                  <ArrowRight size={20} />
-               </div>
-               <div className="feature-card blog" onClick={() => navigate('/blog')} style={{background: 'linear-gradient(135deg, #5856D6, #AF52DE)'}}>
-                  <div className="feature-icon"><Share2 size={32} /></div>
-                  <div className="feature-text">
-                     <h3>ANVI BLOG</h3>
-                     <p>Kiến thức phòng ngừa & Chia sẻ</p>
-                  </div>
-                  <ArrowRight size={20} />
-               </div>
+            <h2 style={{color: 'white', fontSize: '4rem', lineHeight: 1, fontWeight: 950, marginBottom: '24px', letterSpacing: '-0.03em'}}>
+              VÌ SỨC KHỎE <br/> VÀ <span style={{color: '#5AC8FA'}}>AN TÂM</span> CỦA BẠN
+            </h2>
+            <p style={{fontSize: '1.25rem', opacity: 0.9, marginBottom: '40px', fontWeight: 500, lineHeight: 1.6}}>
+              Kết nối cộng đồng cứu hộ, chuyên gia y tế và công nghệ định vị tiên tiến để bảo vệ bạn và người thân trong mọi tình huống khẩn cấp.
+            </p>
+            <div style={{display: 'flex', gap: '20px'}}>
+              <button onClick={() => navigate('/sos')} className="btn-emergency" style={{padding: '20px 45px', fontSize: '1.2rem'}}>KÍCH HOẠT SOS NGAY</button>
+              <button onClick={() => navigate('/auth')} className="btn-medical" style={{background: 'white', color: 'var(--primary-blue)', padding: '20px 45px'}}>ĐĂNG KÝ THÀNH VIÊN</button>
             </div>
           </div>
         </div>
+      </section>
+
+      <div className="medical-container" style={{display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '50px'}}>
+        {/* Main Content Area */}
+        <div>
+          {/* Quick Services Grid */}
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '80px'}}>
+            <div className="service-card-medical" onClick={() => navigate('/first-aid')}>
+              <div className="icon-circle"><BookOpen size={32} /></div>
+              <h3>Cẩm nang Sơ cứu</h3>
+              <p>Hướng dẫn chi tiết cách xử lý các tình huống cấp cứu thường gặp chuẩn y khoa.</p>
+              <div className="card-link">Xem chi tiết <ChevronRight size={16} /></div>
+            </div>
+            <div className="service-card-medical" onClick={() => navigate('/safe-journey')}>
+              <div className="icon-circle"><Shield size={32} /></div>
+              <h3>Hành trình An toàn</h3>
+              <p>Giám sát vị trí thời gian thực và tự động gửi cảnh báo khi hành trình bất thường.</p>
+              <div className="card-link">Xem chi tiết <ChevronRight size={16} /></div>
+            </div>
+            <div className="service-card-medical" onClick={() => navigate('/sos')}>
+              <div className="icon-circle" style={{background: '#FFF1F0', color: '#FF3B30'}}><Activity size={32} /></div>
+              <h3>Mạng lưới Cứu hộ</h3>
+              <p>Hệ thống kết nối tình nguyện viên và chuyên gia cứu hộ xung quanh bạn.</p>
+              <div className="card-link">Xem chi tiết <ChevronRight size={16} /></div>
+            </div>
+          </div>
+
+          {/* Featured News Section */}
+          <div className="section-title" style={{textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
+            <div>
+              <h2 style={{fontSize: '2rem', marginBottom: '10px'}}>TIN TỨC & HOẠT ĐỘNG Y TẾ</h2>
+              <div className="divider" style={{margin: '0'}}></div>
+            </div>
+            <Link to="/blog" style={{color: 'var(--primary-blue)', fontWeight: 800, fontSize: '0.9rem', textDecoration: 'none'}}>XEM TẤT CẢ <ArrowRight size={18} /></Link>
+          </div>
+
+          <div style={{display: 'grid', gap: '32px', marginTop: '40px'}}>
+            {publicPosts.length > 0 ? publicPosts.map(post => (
+              <Link to={`/blog/${post.id}`} key={post.id} style={{textDecoration: 'none', color: 'inherit'}}>
+                <div className="news-item-medical">
+                  <div className="news-thumb">
+                    <img src={post.thumbnailUrl || 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=400'} alt="news" />
+                  </div>
+                  <div className="news-content">
+                    <span className="news-tag">{post.category || 'Y HỌC'}</span>
+                    <h3>{post.title}</h3>
+                    <p>{post.excerpt}</p>
+                    <div className="news-footer">
+                      <span style={{fontWeight: 700}}>Chi tiết bài viết</span>
+                      <ChevronRight size={18} />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )) : (
+               <div style={{padding: '40px', textAlign: 'center', background: 'white', borderRadius: '24px', color: '#999'}}>Đang tải tin tức mới nhất...</div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Info */}
+        <aside>
+          {/* Emergency Box */}
+          <div style={{background: '#FF3B30', color: 'white', padding: '30px', borderRadius: '24px', marginBottom: '30px', boxShadow: '0 15px 30px rgba(255,59,48,0.2)'}}>
+            <h3 style={{color: 'white', fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}><AlertCircle size={24} /> CẤP CỨU</h3>
+            <div style={{fontSize: '1.6rem', fontWeight: 900, marginBottom: '5px'}}>(028) 3896 6894</div>
+            <div style={{fontSize: '0.9rem', opacity: 0.8, fontWeight: 500}}>Trực cấp cứu 24/24</div>
+          </div>
+
+          {/* Hotline Box */}
+          <div style={{background: 'var(--primary-blue)', color: 'white', padding: '30px', borderRadius: '24px', marginBottom: '30px'}}>
+            <h3 style={{color: 'white', fontSize: '1.1rem', marginBottom: '15px'}}>TỔNG ĐÀI CSKH</h3>
+            <div style={{fontSize: '1.8rem', fontWeight: 900, marginBottom: '10px'}}>1900 066 883</div>
+            <p style={{fontSize: '0.85rem', opacity: 0.8}}>Giải đáp thắc mắc và hỗ trợ đăng ký dịch vụ.</p>
+          </div>
+
+          {/* Working Hours */}
+          <div style={{background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #EEE', marginBottom: '30px'}}>
+            <h3 style={{fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}><Clock size={20} color="var(--primary-blue)" /> GIỜ LÀM VIỆC</h3>
+            <div style={{fontSize: '0.9rem', marginBottom: '15px', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{fontWeight: 700, color: '#333'}}>Thứ 2 - Thứ 6:</span>
+              <span style={{color: '#666'}}>07h - 17h</span>
+            </div>
+            <div style={{fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between'}}>
+              <span style={{fontWeight: 700, color: '#333'}}>Thứ 7 & CN:</span>
+              <span style={{color: '#666'}}>08h - 12h</span>
+            </div>
+            <div style={{marginTop: '25px', padding: '15px', background: '#F0F7FF', borderRadius: '12px', color: 'var(--primary-blue)', fontSize: '0.8rem', fontWeight: 800, textAlign: 'center'}}>
+              Hệ thống SOS hoạt động 24/24
+            </div>
+          </div>
+
+          {/* Quick Buttons */}
+          <div style={{display: 'grid', gap: '12px'}}>
+            <button className="btn-medical" style={{width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', padding: '18px 24px'}}><Search size={20} /> TÌM BÁC SĨ / CỨU HỘ</button>
+            <button className="btn-medical" style={{width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', padding: '18px 24px', background: 'white', color: 'var(--primary-blue)', border: '2px solid var(--primary-blue)'}}><MapPin size={20} /> ĐIỂM SƠ CỨU GẦN NHẤT</button>
+          </div>
+        </aside>
       </div>
 
-      {/* MODAL SYSTEM */}
-      {(sosAlert || showFirstAid) && (
-        <div className="modal-overlay">
-          {sosAlert && (
-            <div className="modal-card sos-modal">
-              <div className="modal-header-sos">
-                <div className="sos-icon-ring"><AlertTriangle size={32} color="white" /></div>
-                <div className="modal-title-group">
-                  <span className="modal-label"><BellRing size={14} /> CẢNH BÁO KHẨN CẤP REAL-TIME</span>
-                  <h3>TÍN HIỆU SOS TỪ: {sosAlert.victimName.toUpperCase()}</h3>
-                </div>
-                <button className="close-btn" onClick={() => setSosAlert(null)}><X size={20} /></button>
+      {/* Stats Counter Section */}
+      <section style={{background: 'white', padding: '100px 0', marginTop: '100px', borderTop: '1px solid #EEE'}}>
+        <div className="medical-container">
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '40px', textAlign: 'center'}}>
+            {[
+              { label: 'Năm Hình Thành', value: '05+' },
+              { label: 'Người Dùng Bảo Vệ', value: '1M+' },
+              { label: 'Ca Ứng Cứu Thành Công', value: '25,000+' },
+              { label: 'Tình Nguyện Viên', value: '5,000+' }
+            ].map((stat, i) => (
+              <div key={i}>
+                <div style={{fontSize: '3.5rem', fontWeight: 950, color: 'var(--primary-blue)', marginBottom: '8px', letterSpacing: '-0.05em'}}>{stat.value}</div>
+                <div style={{fontSize: '1rem', fontWeight: 800, color: '#666', textTransform: 'uppercase', letterSpacing: '1px'}}>{stat.label}</div>
               </div>
-              <div className="modal-body">
-                <div className="location-badge"><Navigation size={18} /><span>{sosAlert.locationText || "Đang cập nhật vị trí..."}</span></div>
-                <p>Người dùng <strong>{sosAlert.victimName}</strong> vừa kích hoạt SOS. Hãy nhấn ứng cứu ngay!</p>
-                <button className="action-btn" onClick={() => navigate(`/sos-alert/${sosAlert.publicToken}`)}>ỨNG CỨU NGAY LẬP TỨC <ArrowRight size={20} /></button>
-              </div>
-            </div>
-          )}
-
-          {showFirstAid && (
-            <div className="modal-card aid-modal">
-              <div className="modal-header-aid">
-                <BookOpen size={32} />
-                <div className="modal-title-group"><h3>CẨM NANG SƠ CỨU NHANH</h3></div>
-                <button className="close-btn" onClick={() => {setShowFirstAid(false); setSelectedAid(null); setSearchQuery('');}}><X size={20} /></button>
-              </div>
-              <div className="modal-body scrollable">
-                {!selectedAid ? (
-                  <div className="guide-list-wrapper">
-                    <div className="search-box-aid">
-                      <Search size={20} />
-                      <input 
-                        type="text" 
-                        placeholder="Tìm kiếm hướng dẫn (VD: CPR, bỏng...)" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    <div className="guide-list">
-                      {firstAidGuides.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).map(guide => (
-                        <div key={guide.id} className="guide-item" onClick={() => setSelectedAid(guide)}>
-                          <div className="guide-icon-box">{guide.icon}</div>
-                          <span className="guide-name">{guide.title}</span>
-                          <ChevronRight size={20} />
-                        </div>
-                      ))}
-                      {firstAidGuides.filter(g => g.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                        <div className="no-results">Không tìm thấy hướng dẫn phù hợp.</div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="guide-detail">
-                    <button className="back-btn" onClick={() => setSelectedAid(null)}><ArrowRight size={16} style={{transform: 'rotate(180deg)'}} /> Quay lại</button>
-                    <h4>{selectedAid.title}</h4>
-                    <div className="steps-container">
-                      {selectedAid.steps.map((step, idx) => (
-                        <div key={idx} className="step-row"><span className="step-num">{idx + 1}</span><p>{step}</p></div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      )}
+      </section>
 
       <style>{`
-        .dashboard-wrapper { min-height: 100vh; background: #F8F9FA; font-family: 'Inter', sans-serif; }
-        .main-content { transition: filter 0.3s ease; }
-        .content-blur { filter: blur(12px) brightness(0.8); }
-        
-        .welcome-section { margin-bottom: 48px; }
-        .welcome-text { font-size: 2.8rem; font-weight: 900; color: #1A1A1A; margin: 0; letter-spacing: -0.04em; }
-        .highlight { color: var(--accent-blue); }
-        .sub-text { color: #666; font-weight: 500; font-size: 1.1rem; margin-top: 8px; }
-
-        .dashboard-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
-        
-        /* SOS Card */
-        .sos-card { background: linear-gradient(135deg, #FF3B30, #D70015) !important; color: white; border: none !important; padding: 40px !important; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .sos-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(255, 59, 48, 0.3); }
-        .sos-icon-container { background: rgba(255,255,255,0.2); padding: 16px; border-radius: 16px; display: inline-block; }
-        .card-header { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
-        .label-top { font-size: 0.75rem; font-weight: 900; opacity: 0.8; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
-        .label-main { font-size: 1.8rem; font-weight: 950; letter-spacing: -0.02em; }
-        .card-desc { font-size: 1rem; line-height: 1.6; opacity: 0.9; margin-bottom: 32px; font-weight: 500; }
-        .sos-btn { background: white; color: #FF3B30; padding: 18px 32px; border-radius: 12px; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 12px; }
-
-        /* Profile Summary */
-        .profile-summary-card { padding: 32px !important; display: flex; flex-direction: column; }
-        .info-list-horizontal { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 24px 0; }
-        .info-badge { background: #F2F2F7; padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 12px; }
-        .badge-label { font-size: 0.65rem; font-weight: 800; color: #8E8E93; display: block; }
-        .badge-val { font-size: 1.1rem; font-weight: 900; color: #1C1C1E; }
-        .profile-footer-msg { margin-top: auto; font-size: 0.8rem; color: #AEAEB2; font-weight: 500; text-align: center; font-style: italic; }
-
-        /* Management Tools */
-        .management-row { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 12px; }
-        .tool-card { padding: 20px 24px !important; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: all 0.3s; border: 1px solid #E5E5E5 !important; }
-        .tool-card:hover { border-color: var(--accent-blue) !important; background: #F0F7FF !important; transform: translateY(-4px); }
-        .tool-icon-box { background: #F0F7FF; width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .tool-info { flex: 1; }
-        .tool-info h4 { margin: 0; font-size: 1rem; font-weight: 800; color: #1A1A1A; }
-        .tool-info p { margin: 4px 0 0; font-size: 0.8rem; color: #666; font-weight: 500; }
-        .tool-arrow { opacity: 0.3; transition: transform 0.3s; }
-        .tool-card:hover .tool-arrow { opacity: 1; transform: translateX(4px); color: var(--accent-blue); }
-
-        /* Features */
-        .features-grid { grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 12px; }
-        .feature-card { padding: 32px; border-radius: 24px; color: white; display: flex; align-items: center; gap: 24px; cursor: pointer; transition: all 0.3s; }
-        .feature-card.journey { background: linear-gradient(135deg, #FF9500, #FFCC00); }
-        .feature-card.aid { background: linear-gradient(135deg, #34C759, #30B74E); }
-        .feature-card:hover { transform: scale(1.02); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
-        .feature-icon { background: rgba(255,255,255,0.25); width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
-        .feature-text { flex: 1; }
-        .feature-text h3 { margin: 0; font-size: 1.3rem; font-weight: 900; }
-        .feature-text p { margin: 6px 0 0; font-size: 0.9rem; opacity: 0.9; font-weight: 500; }
-
-        /* Modals */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        .modal-card { background: white; width: 100%; max-width: 520px; border-radius: 28px; overflow: hidden; box-shadow: 0 50px 100px rgba(0,0,0,0.4); animation: slideIn 0.4s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .modal-header-sos { background: #FF3B30; padding: 24px 32px; color: white; display: flex; gap: 20px; align-items: center; }
-        .modal-header-aid { background: linear-gradient(135deg, #34C759, #28a745); padding: 24px 32px; color: white; display: flex; gap: 20px; align-items: center; }
-        .sos-icon-ring { width: 56px; height: 56px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulseRing 1.5s infinite; }
-        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 70% { box-shadow: 0 0 0 20px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
-
-        .close-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; margin-left: auto; }
-        .close-btn:hover { background: rgba(255,255,255,0.3); }
-
-        .modal-body { padding: 32px; background: #fff; }
-        .modal-body.scrollable { max-height: 70vh; overflow-y: auto; }
-        
-        .location-badge { background: #FFF1F0; padding: 16px; border-radius: 14px; display: flex; gap: 12px; align-items: center; color: #FF3B30; font-weight: 800; border: 1px solid #FFD8D6; margin-bottom: 24px; }
-        .action-btn { width: 100%; background: #FF3B30; color: white; padding: 20px; border: none; border-radius: 14px; font-weight: 900; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.3s; }
-        .action-btn:hover { background: #D70015; transform: scale(1.02); }
-
-        .guide-list { display: grid; gap: 14px; }
-        .guide-item { display: flex; align-items: center; gap: 16px; padding: 20px; background: #F2F2F7; border-radius: 18px; cursor: pointer; transition: all 0.2s; }
-        .guide-item:hover { background: #E5E5EA; transform: scale(1.02); }
-        .guide-icon-box { background: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #34C759; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .guide-name { flex: 1; font-weight: 800; font-size: 1.05rem; color: #1C1C1E; }
-
-        .guide-detail { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f0f5; border: none; border-radius: 100px; color: #555; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-bottom: 24px; transition: all 0.2s; }
-        .back-btn:hover { background: #e5e5ea; color: #1c1c1e; transform: translateX(-4px); }
-        
-        .guide-detail h4 { font-size: 1.6rem; font-weight: 900; color: #1c1c1e; margin: 0 0 24px 0; letter-spacing: -0.02em; }
-        .steps-container { display: flex; flex-direction: column; gap: 16px; }
-        .step-row { display: flex; gap: 20px; background: #f8f9fa; padding: 20px; border-radius: 20px; border: 1px solid #eee; align-items: flex-start; transition: all 0.2s; }
-        .step-row:hover { background: #fff; border-color: #34C759; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transform: translateY(-2px); }
-        .step-num { width: 34px; height: 34px; background: #34C759; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; font-size: 0.95rem; }
-        .step-row p { margin: 0; color: #333; font-size: 1.05rem; line-height: 1.6; font-weight: 500; }
-
-        .search-box-aid {
+        .service-card-medical {
+          background: white;
+          padding: 40px 32px;
+          border-radius: 32px;
+          border: 1px solid #EEE;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+        }
+        .service-card-medical:hover {
+          transform: translateY(-10px);
+          box-shadow: 0 30px 60px rgba(0,85,179,0.1);
+          border-color: var(--primary-blue);
+        }
+        .icon-circle {
+          width: 72px;
+          height: 72px;
+          background: var(--secondary-blue);
+          color: var(--primary-blue);
+          border-radius: 20px;
           display: flex;
           align-items: center;
-          gap: 12px;
-          background: #F2F2F7;
-          padding: 14px 20px;
-          border-radius: 16px;
-          margin-bottom: 24px;
-          border: 2px solid transparent;
-          transition: all 0.3s;
+          justify-content: center;
+          margin-bottom: 28px;
         }
-        .search-box-aid:focus-within {
-          background: white;
-          border-color: #34C759;
-          box-shadow: 0 8px 24px rgba(52, 199, 89, 0.1);
-        }
-        .search-box-aid input {
-          flex: 1;
-          background: none;
-          border: none;
-          outline: none;
-          font-size: 1rem;
-          font-weight: 600;
-          color: #1C1C1E;
-          width: 100%;
-        }
-        .search-box-aid input::placeholder { color: #8E8E93; }
-        .search-box-aid svg { color: #8E8E93; }
+        .service-card-medical h3 { font-size: 1.3rem; margin-bottom: 15px; color: #002D5E; }
+        .service-card-medical p { font-size: 0.95rem; color: #666; line-height: 1.6; margin-bottom: 24px; }
+        .card-link { font-size: 0.85rem; font-weight: 800; color: var(--primary-blue); display: flex; align-items: center; gap: 5px; opacity: 0; transform: translateX(-10px); transition: all 0.3s; }
+        .service-card-medical:hover .card-link { opacity: 1; transform: translateX(0); }
 
-        .no-results {
-          text-align: center;
-          padding: 40px 20px;
-          color: #8E8E93;
-          font-weight: 600;
-          font-style: italic;
-        }
+        .news-item-medical { display: flex; gap: 30px; background: white; padding: 24px; border-radius: 28px; transition: all 0.3s; border: 1px solid transparent; }
+        .news-item-medical:hover { border-color: #EEE; box-shadow: var(--shadow-md); transform: scale(1.01); }
+        .news-thumb { width: 280px; height: 180px; border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+        .news-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .news-content { flex: 1; display: flex; flex-direction: column; }
+        .news-tag { font-size: 0.7rem; font-weight: 900; color: var(--primary-blue); background: var(--secondary-blue); padding: 4px 12px; border-radius: 6px; align-self: flex-start; margin-bottom: 12px; }
+        .news-content h3 { font-size: 1.4rem; margin: 0 0 12px 0; color: #1A1A1A; line-height: 1.4; }
+        .news-content p { font-size: 0.95rem; color: #666; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding-top: 20px; color: var(--primary-blue); font-size: 0.9rem; }
       `}</style>
     </div>
   );
+
+  // --- COMMAND CENTER FOR CUSTOMERS ---
+  const renderDashboard = () => (
+    <div className="customer-dashboard" style={{padding: '40px 0'}}>
+      <div className="medical-container">
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px'}}>
+          <div>
+            <h2 style={{fontSize: '2.2rem', fontWeight: 950, letterSpacing: '-0.04em'}}>TRUNG TÂM ĐIỀU KHIỂN</h2>
+            <p style={{color: '#666', fontWeight: 600}}>Chào mừng trở lại, {user.fullName}. Hệ thống đang bảo vệ bạn.</p>
+          </div>
+          <div style={{display: 'flex', gap: '15px'}}>
+            <div style={{background: 'white', padding: '12px 24px', borderRadius: '14px', border: '1px solid #EEE', display: 'flex', alignItems: 'center', gap: '10px'}}>
+               <div style={{width: '10px', height: '10px', borderRadius: '50%', background: '#34C759', boxShadow: '0 0 10px #34C759'}}></div>
+               <span style={{fontSize: '0.85rem', fontWeight: 800, color: '#1A1A1A'}}>SYSTEM ONLINE</span>
+            </div>
+            <button onClick={() => navigate('/sos')} className="btn-emergency">KÍCH HOẠT SOS</button>
+          </div>
+        </div>
+
+        <div style={{display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px'}}>
+          <div className="dashboard-card" style={{background: 'linear-gradient(135deg, #0055B3, #002D5E)', color: 'white', padding: '40px'}}>
+            <h3 style={{color: 'white', fontSize: '1.5rem', marginBottom: '20px'}}>TRẠNG THÁI KHẨN CẤP</h3>
+            <p style={{opacity: 0.8, marginBottom: '30px'}}>Kích hoạt tín hiệu SOS sẽ ngay lập tức thông báo cho người thân và lực lượng cứu hộ gần nhất kèm vị trí GPS của bạn.</p>
+            <button onClick={() => navigate('/sos')} style={{background: 'white', color: '#0055B3', border: 'none', padding: '15px 30px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              MỞ TRẠM PHÁT TÍN HIỆU <ArrowRight size={20} />
+            </button>
+          </div>
+
+          <div className="dashboard-card" style={{background: 'white', padding: '30px', border: '1px solid #EEE'}}>
+            <h3 style={{fontSize: '1.2rem', marginBottom: '25px'}}>THÔNG TIN SỨC KHỎE</h3>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+              <div className="health-stat">
+                <span className="stat-label">NHÓM MÁU</span>
+                <span className="stat-value">{user.bloodType || 'N/A'}</span>
+              </div>
+              <div className="health-stat">
+                <span className="stat-label">LIÊN HỆ KHẨN CẤP</span>
+                <span className="stat-value">ĐÃ THIẾT LẬP</span>
+              </div>
+            </div>
+            <button onClick={() => navigate('/profile')} style={{marginTop: '25px', width: '100%', background: 'var(--secondary-blue)', color: 'var(--primary-blue)', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer'}}>CHỈNH SỬA HỒ SƠ</button>
+          </div>
+        </div>
+
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '30px'}}>
+          {[
+            { label: 'Sơ cấp cứu', icon: <BookOpen />, path: '/first-aid' },
+            { label: 'Hành trình', icon: <Clock />, path: '/safe-journey' },
+            { label: 'Mã QR Cứu hộ', icon: <ShieldCheck />, path: '/profile' },
+            { label: 'Cộng đồng', icon: <Activity />, path: '/blog' }
+          ].map((tool, i) => (
+            <div key={i} className="tool-card-medical" onClick={() => navigate(tool.path)}>
+              <div className="tool-icon">{tool.icon}</div>
+              <span>{tool.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        .dashboard-card { border-radius: 28px; box-shadow: var(--shadow-sm); }
+        .health-stat { background: #F8F9FA; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; }
+        .stat-label { font-size: 0.7rem; font-weight: 800; color: #8E8E93; margin-bottom: 5px; }
+        .stat-value { font-size: 1.2rem; font-weight: 900; color: var(--primary-blue); }
+        .tool-card-medical { background: white; padding: 25px; border-radius: 20px; border: 1px solid #EEE; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .tool-card-medical:hover { border-color: var(--primary-blue); transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .tool-icon { color: var(--primary-blue); margin-bottom: 12px; display: flex; justify-content: center; }
+        .tool-card-medical span { font-weight: 800; font-size: 0.9rem; color: #333; }
+      `}</style>
+    </div>
+  );
+
+  return user ? renderDashboard() : renderLanding();
 };

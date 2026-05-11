@@ -20,6 +20,9 @@ import { AccessRequestPage } from './pages/AccessRequestPage';
 import { ApprovalPage } from './pages/ApprovalPage';
 import { PrivateHealthRecordPage } from './pages/PrivateHealthRecordPage';
 import { AdminPage } from './pages/AdminPage';
+import { AboutPage } from './pages/AboutPage';
+import { FirstAidPage } from './pages/FirstAidPage';
+import { FirstAidDetailPage } from './pages/FirstAidDetailPage';
 
 // Component bảo vệ Route
 const PrivateRoute = ({ children }) => {
@@ -44,6 +47,9 @@ function App() {
           <Route path="/approve/:id" element={<ApprovalPage />} />
           {/* Routes with Layout */}
           <Route element={<Layout />}>
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/first-aid" element={<FirstAidPage />} />
+            <Route path="/first-aid/:id" element={<FirstAidDetailPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/create" element={<CreateBlogPage />} />
             <Route path="/blog/:id" element={<BlogPostDetailPage />} />
@@ -54,12 +60,9 @@ function App() {
               </PrivateRoute>
             } />
             
+            <Route path="/" element={<Dashboard />} />
+            
             {/* Private Routes */}
-            <Route path="/" element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } />
             <Route path="/sos" element={
               <PrivateRoute>
                 <SosPage />

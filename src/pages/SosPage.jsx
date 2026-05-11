@@ -291,7 +291,7 @@ export const SosPage = () => {
     : 0;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+    <div className="medical-container" style={{ padding: '20px 0 100px' }}>
 
       {/* ─── Title ─────────────────────── */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>

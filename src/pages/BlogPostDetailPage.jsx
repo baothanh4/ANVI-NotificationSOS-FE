@@ -47,7 +47,7 @@ export const BlogPostDetailPage = () => {
   if (!post) return <div style={{textAlign: 'center', padding: '100px'}}>Không tìm thấy bài viết.</div>;
 
   return (
-    <div className="blog-post-detail" style={{maxWidth: '800px', margin: '0 auto', paddingBottom: '60px'}}>
+    <div className="blog-post-detail medical-container" style={{maxWidth: '1000px', paddingBottom: '60px'}}>
       <div style={{display: 'flex', gap: '20px', marginBottom: '24px'}}>
         <button 
           onClick={() => navigate('/blog')}

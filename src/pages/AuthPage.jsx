@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserPlus, LogIn, CheckCircle2, ShieldAlert, Phone, Lock, User, Mail, Calendar, Droplet } from 'lucide-react';
+import { 
+  UserPlus, LogIn, CheckCircle2, ShieldAlert, Phone, Lock, 
+  User, Mail, Calendar, Droplet, ShieldCheck, ArrowRight,
+  Shield, CheckCircle
+} from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 
 export const AuthPage = () => {
@@ -20,61 +24,26 @@ export const AuthPage = () => {
 
   const validateField = async (name, value) => {
     let currentError = null;
-    
     if (name === 'fullName') {
       const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/;
-      if (!value) {
-        currentError = 'Vui lòng nhập họ tên';
-      } else if (!nameRegex.test(value)) {
-        currentError = 'Họ tên không được chứa ký tự đặc biệt';
-      }
+      if (!value) currentError = 'Vui lòng nhập họ tên';
+      else if (!nameRegex.test(value)) currentError = 'Họ tên không hợp lệ';
     }
-
     if (name === 'email') {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-      if (!value) {
-        currentError = 'Vui lòng nhập email';
-      } else if (!emailRegex.test(value)) {
-        currentError = 'Email không hợp lệ (VD: name@example.com)';
-      } else {
-        setCheckingAvailability(prev => ({ ...prev, email: true }));
-        try {
-          const res = await axiosClient.get(`/auth/check-availability?email=${value}`);
-          if (!res.available) currentError = 'Email này đã được sử dụng';
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setCheckingAvailability(prev => ({ ...prev, email: false }));
-        }
-      }
+      if (!value) currentError = 'Vui lòng nhập email';
+      else if (!emailRegex.test(value)) currentError = 'Email không hợp lệ';
     }
-
     if (name === 'phone') {
       const phoneRegex = /^(03|05|07|08|09)[0-9]{8}$/;
-      if (!value) {
-        currentError = 'Vui lòng nhập số điện thoại';
-      } else if (!phoneRegex.test(value)) {
-        currentError = 'Số điện thoại không hợp lệ (VN)';
-      } else if (!isLogin) {
-        setCheckingAvailability(prev => ({ ...prev, phone: true }));
-        try {
-          const res = await axiosClient.get(`/auth/check-availability?phone=${value}`);
-          if (!res.available) currentError = 'SĐT này đã được sử dụng';
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setCheckingAvailability(prev => ({ ...prev, phone: false }));
-        }
-      }
+      if (!value) currentError = 'Vui lòng nhập số điện thoại';
+      else if (!phoneRegex.test(value)) currentError = 'SĐT không hợp lệ';
     }
 
     setValidationErrors(prev => {
       const newErrs = { ...prev };
-      if (currentError) {
-        newErrs[name] = currentError;
-      } else {
-        delete newErrs[name];
-      }
+      if (currentError) newErrs[name] = currentError;
+      else delete newErrs[name];
       return newErrs;
     });
   };
@@ -82,7 +51,6 @@ export const AuthPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (Object.keys(validationErrors).length > 0) return;
-    
     setError('');
     try {
       if (isLogin) {
@@ -103,296 +71,244 @@ export const AuthPage = () => {
     }
   };
 
-  const inputContainerStyle = {
-    position: 'relative',
-    marginBottom: '20px'
-  };
-
-  const labelStyle = {
-    display: 'block',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    marginBottom: '8px'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px 16px 12px 45px',
-    borderRadius: '12px',
-    border: '1px solid #E8E8E8',
-    background: '#FAFAFA',
-    fontSize: '0.95rem',
-    fontWeight: 500,
-    outline: 'none',
-    transition: 'all 0.2s'
-  };
-
-  const iconStyle = {
-    position: 'absolute',
-    left: '16px',
-    top: '38px',
-    color: '#BBB'
-  };
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%)',
-      padding: '20px'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: isLogin ? '440px' : '600px',
-        background: 'white',
-        borderRadius: '24px',
-        padding: '48px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+    <div className="auth-page-medical" style={{minHeight: '100vh', display: 'flex', background: '#F0F2F5', animation: 'fadeIn 0.5s ease-out'}}>
+      {/* Left Panel: Branding & Mission */}
+      <div className="auth-side-panel" style={{
+        flex: '1.2',
+        background: `linear-gradient(rgba(0, 85, 179, 0.85), rgba(0, 45, 94, 0.95)), url('https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=2000')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '80px',
+        color: 'white'
       }}>
-        
-        {/* Logo/Icon Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            background: isLogin ? '#FF3B30' : '#007AFF',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            color: 'white',
-            boxShadow: `0 8px 16px ${isLogin ? 'rgba(255, 59, 48, 0.2)' : 'rgba(0, 122, 255, 0.2)'}`
-          }}>
-            {isLogin ? <LogIn size={32} /> : <UserPlus size={32} />}
+        <div style={{maxWidth: '500px'}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px'}}>
+            <div style={{width: '60px', height: '60px', background: 'white', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+              <ShieldCheck color="var(--primary-blue)" size={40} />
+            </div>
+            <div>
+              <h1 style={{fontSize: '2.5rem', color: 'white', margin: 0, fontWeight: 950}}>ANVI-SOS</h1>
+              <span style={{fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', opacity: 0.8}}>Hospital Standard Safety</span>
+            </div>
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
-            {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
-          </h1>
-          <p style={{ color: '#888', fontWeight: 500, marginTop: '8px' }}>
-            {isLogin ? 'Đăng nhập để quản lý hồ sơ sinh tồn của bạn' : 'Tham gia cộng đồng cứu hộ ANVI-SOS ngay hôm nay'}
+          
+          <h2 style={{fontSize: '3rem', fontWeight: 900, lineHeight: 1.2, marginBottom: '30px', color: 'white'}}>
+            VÌ SỨC KHỎE VÀ <br/><span style={{color: '#5AC8FA'}}>AN TÂM</span> CỦA BẠN
+          </h2>
+          
+          <p style={{fontSize: '1.1rem', opacity: 0.9, lineHeight: 1.6, marginBottom: '50px'}}>
+            Gia nhập cộng đồng ANVI-SOS để được bảo vệ bởi mạng lưới cứu hộ chuyên nghiệp và quản lý hồ sơ y tế thông minh theo tiêu chuẩn quốc tế.
           </p>
-        </div>
 
-        {justVerified && (
-          <div style={{
-            background: '#F0FDF4',
-            border: '1px solid #00C853',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            color: '#00843D',
-            fontSize: '0.85rem',
-            fontWeight: 600
-          }}>
-            <CheckCircle2 size={18} /> Email đã xác thực! Bạn có thể đăng nhập.
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            background: '#FFF4F4',
-            border: '1px solid #FF3B30',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            marginBottom: '24px',
-            color: '#D32F2F',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <ShieldAlert size={18} /> {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <>
-              <div style={inputContainerStyle}>
-                <label style={labelStyle}>Họ và tên</label>
-                <User size={18} style={iconStyle} />
-                <input
-                  type="text" style={{...inputStyle, border: validationErrors.fullName ? '1px solid #FF3B30' : '1px solid #E8E8E8'}}
-                  value={formData.fullName}
-                  onChange={(e) => {
-                    setFormData({ ...formData, fullName: e.target.value });
-                    validateField('fullName', e.target.value);
-                  }}
-                  onBlur={(e) => validateField('fullName', e.target.value)}
-                  placeholder="Nguyễn Văn A"
-                  required
-                />
-                {validationErrors.fullName && <div style={{fontSize: '0.7rem', color: '#D32F2F', marginTop: '4px', fontWeight: 600}}>{validationErrors.fullName}</div>}
+          <div style={{display: 'grid', gap: '20px'}}>
+            {[
+              { text: 'Hồ sơ y tế được mã hóa bảo mật', icon: <Shield size={20} /> },
+              { text: 'Kết nối cứu hộ 115 nhanh nhất', icon: <CheckCircle size={20} /> },
+              { text: 'Mã QR sinh tồn trên màn hình khóa', icon: <CheckCircle size={20} /> }
+            ].map((item, i) => (
+              <div key={i} style={{display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.95rem', fontWeight: 600}}>
+                <div style={{color: '#5AC8FA'}}>{item.icon}</div>
+                {item.text}
               </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={inputContainerStyle}>
-                  <label style={labelStyle}>Email</label>
-                  <Mail size={18} style={iconStyle} />
-                  <input
-                    type="email" style={{...inputStyle, border: validationErrors.email ? '1px solid #FF3B30' : '1px solid #E8E8E8'}}
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      validateField('email', e.target.value);
-                    }}
-                    onBlur={(e) => validateField('email', e.target.value)}
-                    placeholder="name@example.com"
-                    required
-                  />
-                  {validationErrors.email && <div style={{fontSize: '0.7rem', color: '#D32F2F', marginTop: '4px', fontWeight: 600}}>{validationErrors.email}</div>}
-                </div>
-                <div style={inputContainerStyle}>
-                  <label style={labelStyle}>Năm sinh</label>
-                  <Calendar size={18} style={iconStyle} />
-                  <input
-                    type="number" style={inputStyle}
-                    value={formData.birthYear}
-                    onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                    placeholder="1995"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={inputContainerStyle}>
-                  <label style={labelStyle}>Số điện thoại</label>
-                  <Phone size={18} style={iconStyle} />
-                  <input
-                    type="text" style={{...inputStyle, border: validationErrors.phone ? '1px solid #FF3B30' : '1px solid #E8E8E8'}}
-                    value={formData.phone}
-                    onChange={(e) => {
-                      setFormData({ ...formData, phone: e.target.value });
-                      validateField('phone', e.target.value);
-                    }}
-                    onBlur={(e) => validateField('phone', e.target.value)}
-                    placeholder="0912345678"
-                    required
-                  />
-                  {validationErrors.phone && <div style={{fontSize: '0.7rem', color: '#D32F2F', marginTop: '4px', fontWeight: 600}}>{validationErrors.phone}</div>}
-                </div>
-                <div style={inputContainerStyle}>
-                  <label style={labelStyle}>Nhóm máu</label>
-                  <Droplet size={18} style={iconStyle} />
-                  <select 
-                    style={{...inputStyle, appearance: 'none'}}
-                    value={formData.bloodType}
-                    onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
-                    required
-                  >
-                    <option value="">Chọn nhóm máu</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="Chưa rõ">Chưa rõ</option>
-                  </select>
-                </div>
-              </div>
-            </>
-          )}
-
-          <div style={inputContainerStyle}>
-            <label style={labelStyle}>{isLogin ? 'Số điện thoại' : 'Thiết lập mật khẩu'}</label>
-            {isLogin ? <Phone size={18} style={iconStyle} /> : <Lock size={18} style={iconStyle} />}
-            <input
-              type={isLogin ? "text" : "password"} style={inputStyle}
-              value={isLogin ? formData.phone : formData.password}
-              onChange={(e) => setFormData({ ...formData, [isLogin ? 'phone' : 'password']: e.target.value })}
-              placeholder={isLogin ? "0912345678" : "••••••••"}
-              required
-            />
+            ))}
           </div>
-
-          {isLogin && (
-            <div style={inputContainerStyle}>
-              <label style={labelStyle}>Mật khẩu</label>
-              <Lock size={18} style={iconStyle} />
-              <input
-                type="password" style={inputStyle}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          )}
-
-          {isLogin && (
-            <div style={{ textAlign: 'right', marginBottom: '24px', marginTop: '-12px' }}>
-              <button type="button"
-                style={{ background: 'none', border: 'none', color: '#007AFF', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
-                onClick={() => navigate('/forgot-password')}>
-                Quên mật khẩu?
-              </button>
-            </div>
-          )}
-
-          <button 
-            type="submit" 
-            style={{ 
-              width: '100%', 
-              padding: '16px', 
-              background: isLogin ? '#FF3B30' : '#007AFF',
-              color: 'white',
-              borderRadius: '12px',
-              border: 'none',
-              fontSize: '1rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: `0 8px 24px ${isLogin ? 'rgba(255, 59, 48, 0.25)' : 'rgba(0, 122, 255, 0.25)'}`,
-              transition: 'all 0.3s',
-              opacity: Object.keys(validationErrors).length > 0 ? 0.6 : 1
-            }}
-            disabled={Object.keys(validationErrors).length > 0 || checkingAvailability.email || checkingAvailability.phone}
-            className="auth-submit-btn"
-          >
-            {isLogin ? 'ĐĂNG NHẬP NGAY' : 'HOÀN TẤT ĐĂNG KÝ'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '32px', color: '#666', fontWeight: 500 }}>
-          {isLogin ? 'Bạn chưa có tài khoản? ' : 'Bạn đã có tài khoản ANVI-SOS? '}
-          <button
-            type="button"
-            style={{ background: 'none', border: 'none', color: isLogin ? '#FF3B30' : '#007AFF', cursor: 'pointer', fontWeight: 700, marginLeft: '4px' }}
-            onClick={() => { setIsLogin(!isLogin); setError(''); }}
-          >
-            {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
-          </button>
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        .auth-submit-btn:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.1);
+      {/* Right Panel: Auth Form */}
+      <div className="auth-form-panel" style={{
+        flex: '1',
+        background: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '60px'
+      }}>
+        <div style={{width: '100%', maxWidth: isLogin ? '400px' : '500px'}}>
+          <div style={{marginBottom: '40px'}}>
+            <h3 style={{fontSize: '2rem', fontWeight: 900, color: '#1A1A1A', marginBottom: '10px'}}>
+              {isLogin ? 'Đăng nhập thành viên' : 'Đăng ký tài khoản'}
+            </h3>
+            <p style={{color: '#666', fontWeight: 500}}>
+              {isLogin ? 'Chào mừng bạn quay trở lại với hệ thống.' : 'Hãy điền các thông tin dưới đây để bắt đầu.'}
+            </p>
+          </div>
+
+          {justVerified && (
+            <div style={{background: '#F0FDF4', color: '#166534', padding: '15px', borderRadius: '12px', marginBottom: '30px', border: '1px solid #BBF7D0', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <CheckCircle2 size={18} /> Email đã xác thực thành công!
+            </div>
+          )}
+
+          {error && (
+            <div style={{background: '#FFF1F0', color: '#D32F2F', padding: '15px', borderRadius: '12px', marginBottom: '30px', border: '1px solid #FECACA', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <ShieldAlert size={18} /> {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} style={{display: 'grid', gap: '20px'}}>
+            {!isLogin && (
+              <>
+                <div className="medical-input-group">
+                  <label>HỌ VÀ TÊN</label>
+                  <div className="input-with-icon">
+                    <User size={18} className="input-icon" />
+                    <input
+                      type="text"
+                      placeholder="Nguyễn Văn A"
+                      value={formData.fullName}
+                      onChange={(e) => { setFormData({...formData, fullName: e.target.value}); validateField('fullName', e.target.value); }}
+                      required
+                    />
+                  </div>
+                  {validationErrors.fullName && <span className="error-msg">{validationErrors.fullName}</span>}
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '15px'}}>
+                  <div className="medical-input-group">
+                    <label>EMAIL</label>
+                    <div className="input-with-icon">
+                      <Mail size={18} className="input-icon" />
+                      <input
+                        type="email"
+                        placeholder="email@example.com"
+                        value={formData.email}
+                        onChange={(e) => { setFormData({...formData, email: e.target.value}); validateField('email', e.target.value); }}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="medical-input-group">
+                    <label>NĂM SINH</label>
+                    <div className="input-with-icon">
+                      <Calendar size={18} className="input-icon" />
+                      <input
+                        type="number"
+                        placeholder="1995"
+                        value={formData.birthYear}
+                        onChange={(e) => setFormData({...formData, birthYear: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '15px'}}>
+                  <div className="medical-input-group">
+                    <label>SỐ ĐIỆN THOẠI</label>
+                    <div className="input-with-icon">
+                      <Phone size={18} className="input-icon" />
+                      <input
+                        type="text"
+                        placeholder="0912345678"
+                        value={formData.phone}
+                        onChange={(e) => { setFormData({...formData, phone: e.target.value}); validateField('phone', e.target.value); }}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="medical-input-group">
+                    <label>NHÓM MÁU</label>
+                    <div className="input-with-icon">
+                      <Droplet size={18} className="input-icon" />
+                      <select 
+                        value={formData.bloodType}
+                        onChange={(e) => setFormData({...formData, bloodType: e.target.value})}
+                        required
+                      >
+                        <option value="">Chọn</option>
+                        {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Chưa rõ'].map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="medical-input-group">
+              <label>{isLogin ? 'SỐ ĐIỆN THOẠI' : 'MẬT KHẨU'}</label>
+              <div className="input-with-icon">
+                {isLogin ? <Phone size={18} className="input-icon" /> : <Lock size={18} className="input-icon" />}
+                <input
+                  type={isLogin ? "text" : "password"}
+                  placeholder={isLogin ? "0912xxx..." : "••••••••"}
+                  value={isLogin ? formData.phone : formData.password}
+                  onChange={(e) => setFormData({ ...formData, [isLogin ? 'phone' : 'password']: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            {isLogin && (
+              <div className="medical-input-group">
+                <label>MẬT KHẨU</label>
+                <div className="input-with-icon">
+                  <Lock size={18} className="input-icon" />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                </div>
+                <div style={{textAlign: 'right', marginTop: '8px'}}>
+                   <Link to="/forgot-password" style={{fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-blue)', textDecoration: 'none'}}>Quên mật khẩu?</Link>
+                </div>
+              </div>
+            )}
+
+            <button type="submit" className="btn-medical-auth" style={{width: '100%', padding: '18px', marginTop: '10px'}}>
+              {isLogin ? 'ĐĂNG NHẬP NGAY' : 'ĐĂNG KÝ THÀNH VIÊN'} <ArrowRight size={18} />
+            </button>
+          </form>
+
+          <div style={{textAlign: 'center', marginTop: '40px', color: '#666', fontWeight: 600}}>
+            {isLogin ? 'Bạn chưa có tài khoản? ' : 'Bạn đã có tài khoản? '}
+            <button 
+              onClick={() => setIsLogin(!isLogin)}
+              style={{background: 'none', border: 'none', color: 'var(--primary-blue)', fontWeight: 800, cursor: 'pointer', padding: 0}}
+            >
+              {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .medical-input-group { display: flex; flex-direction: column; gap: 8px; }
+        .medical-input-group label { font-size: 0.7rem; font-weight: 900; color: #999; letter-spacing: 0.5px; }
+        .input-with-icon { position: relative; }
+        .input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #BBB; transition: color 0.2s; }
+        .medical-input-group input, .medical-input-group select {
+          width: 100%; padding: 14px 15px 14px 45px; border-radius: 12px; border: 1px solid #EEE;
+          background: #F9F9F9; font-weight: 700; color: #333; outline: none; transition: all 0.2s;
         }
-        .auth-submit-btn:active {
-          transform: translateY(0);
+        .medical-input-group input:focus, .medical-input-group select:focus {
+          border-color: var(--primary-blue); background: white; box-shadow: 0 0 0 4px rgba(0,85,179,0.05);
         }
-        input:focus {
-          border-color: ${isLogin ? '#FF3B30' : '#007AFF'} !important;
-          background: white !important;
-          box-shadow: 0 0 0 4px ${isLogin ? 'rgba(255, 59, 48, 0.1)' : 'rgba(0, 122, 255, 0.1)'};
+        .medical-input-group input:focus + .input-icon { color: var(--primary-blue); }
+        .error-msg { font-size: 0.7rem; color: #D32F2F; font-weight: 800; }
+        
+        .btn-medical-auth {
+          background: var(--primary-blue); color: white; border: none; border-radius: 12px;
+          font-weight: 850; font-size: 1rem; cursor: pointer; transition: all 0.3s;
+          display: flex; alignItems: center; justify-content: center; gap: 10px;
+          box-shadow: 0 10px 20px rgba(0,85,179,0.2);
         }
-      `}} />
+        .btn-medical-auth:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,85,179,0.3); }
+
+        @media (max-width: 1024px) {
+          .auth-side-panel { display: none; }
+          .auth-form-panel { flex: 1; padding: 40px 20px; }
+        }
+      `}</style>
     </div>
   );
 };

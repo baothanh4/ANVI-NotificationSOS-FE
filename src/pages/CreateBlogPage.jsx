@@ -4,8 +4,10 @@ import axiosClient from '../api/axiosClient';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   ChevronLeft, Image as ImageIcon, FileText, Layout, 
-  Send, Eye, Clock, User, CheckCircle2, AlertCircle, X
+  Send, Eye, Clock, User, CheckCircle2, AlertCircle, X, AlignLeft
 } from 'lucide-react';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 export const CreateBlogPage = () => {
   const { user } = useAuth();
@@ -20,6 +22,23 @@ export const CreateBlogPage = () => {
   });
 
   const categories = ['Sơ cứu', 'Phòng ngừa', 'Sức khỏe', 'Tin tức'];
+
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'blockquote', 'code-block'],
+      [{ 'color': [] }, { 'background': [] }],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header', 'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet', 'link', 'blockquote', 'code-block',
+    'color', 'background'
+  ];
 
   const handleUpload = async (file) => {
     if (!file) return;
@@ -89,9 +108,27 @@ export const CreateBlogPage = () => {
                   placeholder="Nhập tiêu đề ấn tượng cho bài viết của bạn..."
                   value={newPost.title}
                   onChange={e => setNewPost({...newPost, title: e.target.value})}
-                  style={{ width: '100%', padding: '20px', background: '#F9F9F9', border: '2px solid #F0F0F0', borderRadius: '18px', fontSize: '1.1rem', fontWeight: 600, transition: 'all 0.3s' }}
-                  onFocus={e => e.target.style.borderColor = 'var(--accent-blue)'}
-                  onBlur={e => e.target.style.borderColor = '#F0F0F0'}
+                  style={{ 
+                    width: '100%', 
+                    padding: '20px', 
+                    background: '#F9F9F9', 
+                    border: '2px solid #F0F0F0', 
+                    borderRadius: '18px', 
+                    fontSize: '1.1rem', 
+                    fontWeight: 700, 
+                    transition: 'all 0.3s',
+                    outline: 'none'
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'var(--accent-blue)';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(0, 100, 210, 0.05)';
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = '#F0F0F0';
+                    e.target.style.background = '#F9F9F9';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
 
@@ -141,32 +178,61 @@ export const CreateBlogPage = () => {
                   placeholder="Viết một đoạn ngắn tóm tắt nội dung để thu hút người đọc..."
                   value={newPost.excerpt}
                   onChange={e => setNewPost({...newPost, excerpt: e.target.value})}
-                  style={{ width: '100%', padding: '20px', background: '#F9F9F9', border: '2px solid #F0F0F0', borderRadius: '18px', fontSize: '1rem', minHeight: '100px', resize: 'vertical' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '20px', 
+                    background: '#F9F9F9', 
+                    border: '2px solid #F0F0F0', 
+                    borderRadius: '18px', 
+                    fontSize: '1rem', 
+                    minHeight: '100px', 
+                    resize: 'vertical',
+                    transition: 'all 0.3s',
+                    outline: 'none',
+                    fontWeight: 500,
+                    lineHeight: 1.6
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'var(--accent-blue)';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(0, 100, 210, 0.05)';
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = '#F0F0F0';
+                    e.target.style.background = '#F9F9F9';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
 
               {/* Nội dung chính */}
               <div className="form-section">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#1A1A1A', marginBottom: '16px' }}>
-                   <FileText size={20} color="var(--accent-blue)" /> NỘI DUNG CHI TIẾT
+                   <AlignLeft size={20} color="var(--accent-blue)" /> NỘI DUNG CHI TIẾT
                 </label>
-                <div style={{ background: '#F9F9F9', border: '2px solid #F0F0F0', borderRadius: '18px', overflow: 'hidden' }}>
-                  <div style={{ padding: '12px', borderBottom: '1px solid #eee', background: 'white', display: 'flex', gap: '10px' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#999', fontWeight: 600 }}>CÔNG CỤ HỖ TRỢ:</span>
-                    <button type="button" onClick={() => setNewPost({...newPost, content: newPost.content + '<h3>Tiêu đề mới</h3>'})} style={{ background: '#eee', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>H3</button>
-                    <button type="button" onClick={() => setNewPost({...newPost, content: newPost.content + '<p>Đoạn văn mới...</p>'})} style={{ background: '#eee', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>P</button>
-                    <button type="button" onClick={() => setNewPost({...newPost, content: newPost.content + '<ul><li>Mục mới</li></ul>'})} style={{ background: '#eee', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>UL</button>
-                  </div>
-                  <textarea 
-                    required
-                    placeholder="Sử dụng các thẻ HTML cơ bản để định dạng nội dung của bạn..."
+                <div className="quill-editor-wrapper" style={{ 
+                  background: 'white', 
+                  border: '2px solid #F0F0F0', 
+                  borderRadius: '18px', 
+                  overflow: 'hidden',
+                  transition: 'all 0.3s'
+                }}>
+                  <ReactQuill 
+                    theme="snow"
                     value={newPost.content}
-                    onChange={e => setNewPost({...newPost, content: e.target.value})}
-                    style={{ width: '100%', padding: '20px', background: 'transparent', border: 'none', fontSize: '1.05rem', minHeight: '300px', fontFamily: 'monospace', outline: 'none' }}
+                    onChange={(content) => setNewPost({...newPost, content})}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Bắt đầu viết nội dung bài viết của bạn tại đây..."
+                    style={{ 
+                      height: '400px', 
+                      display: 'flex', 
+                      flexDirection: 'column' 
+                    }}
                   />
                 </div>
-                <p style={{ marginTop: '12px', color: '#888', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <AlertCircle size={14} /> Bạn có thể dán mã HTML từ các trình soạn thảo khác vào đây.
+                <p style={{ marginTop: '12px', color: '#888', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CheckCircle2 size={14} color="#34C759" /> Trình soạn thảo tự động lưu định dạng và mã HTML cho bạn.
                 </p>
               </div>
             </form>
