@@ -1,46 +1,66 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
-import { AlertTriangle, MapPin, X } from 'lucide-react';
+import { AlertTriangle, MapPin, X, Bell } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export const SosListener = () => {
+  const { user } = useAuth();
   const [incomingSos, setIncomingSos] = useState(null);
   const navigate = useNavigate();
-  const audioRef = React.useRef(null);
+  const audioRef = useRef(null);
+  const stompClientRef = useRef(null);
 
   useEffect(() => {
     const socket = new SockJS('/ws-sos');
     const stompClient = Stomp.over(socket);
-    stompClient.debug = () => {}; // Tắt log debug hoàn toàn
+    stompClientRef.current = stompClient;
+    stompClient.debug = () => {}; // Disable debug logs
+
+    const onMessageReceived = (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (data.type === 'SOS_ALERT') {
+          setIncomingSos(data);
+          if (audioRef.current) {
+            audioRef.current.play().catch(e => console.log("Audio play blocked", e));
+          }
+        } else if (data.type === 'SOS_SAFE') {
+            // If the victim is marked safe, clear the alert if it matches
+            setIncomingSos(prev => (prev && prev.publicToken === data.publicToken) ? null : prev);
+        }
+      } catch (e) {
+        console.error("Parse SOS message error", e);
+      }
+    };
 
     stompClient.connect({}, 
       () => {
-        console.log("WebSocket Connected");
-        stompClient.subscribe('/topic/sos-alerts', (message) => {
-          try {
-            const data = JSON.parse(message.body);
-            if (data.type === 'SOS_ALERT') {
-              setIncomingSos(data);
-              if (audioRef.current) {
-                audioRef.current.play().catch(() => {});
-              }
-            }
-          } catch (e) {
-            console.error("Parse SOS message error", e);
-          }
-        });
+        console.log("WebSocket Connected successfully");
+        
+        // 1. Subscribe to Global Broadcast (Admins/Dashboards)
+        stompClient.subscribe('/topic/sos-alerts', onMessageReceived);
+
+        // 2. Subscribe to Personalized Alerts (Social Connections / Nearby Volunteers)
+        if (user && user.phone) {
+          // Spring Stomp /user/ prefix automatically maps to the authenticated session
+          // We subscribe to the relative queue path
+          stompClient.subscribe('/user/queue/sos-alerts', onMessageReceived);
+          stompClient.subscribe('/user/queue/nearby-sos', onMessageReceived);
+        }
       },
       (error) => {
         console.log("WebSocket Connection Error: ", error);
-        // Có thể thử kết nối lại sau 5 giây nếu cần
       }
     );
 
     return () => {
-      if (stompClient.connected) stompClient.disconnect();
+      if (stompClientRef.current && stompClientRef.current.connected) {
+        stompClientRef.current.disconnect();
+      }
     };
-  }, []);
+  }, [user]);
 
   if (!incomingSos) return (
     <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3" preload="auto" />
@@ -50,39 +70,51 @@ export const SosListener = () => {
     <div style={overlayStyle}>
       <div className="sos-alert-modal" style={modalStyle}>
         <div style={headerStyle}>
-          <AlertTriangle size={32} className="flicker" />
-          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>CẢNH BÁO SOS KHẨN CẤP!</h2>
+          <div style={pulseIconStyle}>
+            <AlertTriangle size={32} color="white" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#FF3B30' }}>CẢNH BÁO KHẨN CẤP</h2>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#666', marginTop: '2px' }}>TÍN HIỆU SOS THỜI GIAN THỰC</div>
+          </div>
+          <button onClick={() => setIncomingSos(null)} style={closeBtnStyle}><X size={20} /></button>
         </div>
         
         <div style={bodyStyle}>
           <div style={victimInfoStyle}>
-            <p style={{ color: '#666666', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em' }}>PHÁT HIỆN TÍN HIỆU TỪ:</p>
-            <h1 style={{ color: '#121212', margin: 0, fontSize: '2rem', fontWeight: 800 }}>{incomingSos.victimName}</h1>
+            <div style={{ background: '#F2F2F7', padding: '12px', borderRadius: '12px', marginBottom: '16px', display: 'inline-block' }}>
+               <Bell size={24} color="#007AFF" />
+            </div>
+            <p style={{ color: '#8E8E93', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.05em' }}>CÓ NGƯỜI CẦN TRỢ GIÚP:</p>
+            <h1 style={{ color: '#1C1C1E', margin: 0, fontSize: '1.8rem', fontWeight: 950, letterSpacing: '-0.02em' }}>{incomingSos.victimName}</h1>
           </div>
 
           <div style={locationBoxStyle}>
-            <div style={{ fontWeight: 700, color: '#0064D2', marginBottom: '8px', fontSize: '0.72rem' }}>ĐỊA ĐIỂM XÁC ĐỊNH:</div>
-            <div style={{ color: '#121212', fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.4 }}>
-              {incomingSos.locationText || 'Đang cập nhật địa chỉ...'}
+            <div style={{ fontWeight: 800, color: '#007AFF', marginBottom: '8px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPin size={14} /> VỊ TRÍ PHÁT TÍN HIỆU:
+            </div>
+            <div style={{ color: '#1C1C1E', fontSize: '1rem', fontWeight: 700, lineHeight: 1.5 }}>
+              {incomingSos.locationText || 'Đang xác định địa chỉ chính xác...'}
             </div>
           </div>
 
           <div style={actionBoxStyle}>
             <button 
               onClick={() => {
+                const token = incomingSos.publicToken;
                 setIncomingSos(null);
-                navigate(`/sos-alert/${incomingSos.publicToken}`);
+                navigate(`/sos-alert/${token}`);
               }}
               style={btnOpenStyle}
             >
-              XEM CHI TIẾT & HỖ TRỢ
+              PHẢN HỒI NGAY LẬP TỨC
             </button>
             
             <button 
               onClick={() => setIncomingSos(null)}
               style={btnIgnoreStyle}
             >
-              Bỏ qua thông báo
+              Bỏ qua thông báo này
             </button>
           </div>
         </div>
@@ -90,57 +122,69 @@ export const SosListener = () => {
 
       <style>{`
         @keyframes modalShow {
-          from { transform: scale(0.8); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
+          from { transform: translateY(20px) scale(0.95); opacity: 0; }
+          to { transform: translateY(0) scale(1); opacity: 1; }
         }
-        @keyframes flicker {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
+        @keyframes pulseRed {
+          0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
+          70% { box-shadow: 0 0 0 15px rgba(255, 59, 48, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
         }
-        .flicker { animation: flicker 0.2s infinite; }
-        .sos-alert-modal { animation: modalShow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sos-alert-modal { animation: modalShow 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
   );
 };
 
 const overlayStyle = {
-  position: 'fixed', inset: 0, zIndex: 9999,
-  background: 'rgba(18,18,18,0.7)', backdropFilter: 'blur(8px)',
+  position: 'fixed', inset: 0, zIndex: 10000,
+  background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
 };
 
 const modalStyle = {
-  width: '100%', maxWidth: '420px',
-  background: '#FFFFFF', borderTop: '8px solid #0064D2',
-  boxShadow: '0 20px 40px rgba(0,0,0,0.2)', borderRadius: '4px',
-  overflow: 'hidden', fontFamily: "'Work Sans', sans-serif"
+  width: '100%', maxWidth: '400px',
+  background: '#FFFFFF', borderRadius: '32px',
+  boxShadow: '0 30px 60px rgba(0,0,0,0.15)',
+  overflow: 'hidden', border: '1px solid rgba(0,0,0,0.05)'
 };
 
 const headerStyle = {
-  background: '#F8F8F8', color: '#121212', padding: '24px',
-  display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #EEEEEE'
+  padding: '24px 24px 20px', display: 'flex', alignItems: 'center', gap: '16px',
+  borderBottom: '1px solid #F2F2F7'
+};
+
+const pulseIconStyle = {
+  width: '56px', height: '56px', background: '#FF3B30', borderRadius: '18px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  animation: 'pulseRed 2s infinite'
+};
+
+const closeBtnStyle = {
+  background: '#F2F2F7', border: 'none', width: '36px', height: '36px',
+  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', color: '#8E8E93'
 };
 
 const bodyStyle = { padding: '32px', textAlign: 'center' };
 
-const victimInfoStyle = { marginBottom: '32px' };
+const victimInfoStyle = { marginBottom: '28px' };
 
 const locationBoxStyle = {
-  background: '#F8F8F8', borderLeft: '4px solid #0064D2',
-  padding: '16px', borderRadius: '2px', textAlign: 'left',
-  marginBottom: '32px'
+  background: '#F8F8F8', padding: '20px', borderRadius: '24px',
+  textAlign: 'left', marginBottom: '32px'
 };
 
 const actionBoxStyle = { display: 'flex', flexDirection: 'column', gap: '12px' };
 
 const btnOpenStyle = {
-  background: '#0064D2', color: 'white', border: 'none',
-  padding: '16px', fontWeight: 700, cursor: 'pointer',
-  fontSize: '1rem', borderRadius: '4px', transition: '0.2s'
+  background: '#FF3B30', color: 'white', border: 'none',
+  padding: '18px', fontWeight: 800, cursor: 'pointer',
+  fontSize: '1rem', borderRadius: '16px', transition: 'all 0.2s',
+  boxShadow: '0 8px 20px rgba(255,59,48,0.3)'
 };
 
 const btnIgnoreStyle = {
-  background: 'transparent', color: '#666666', border: 'none',
-  padding: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500
+  background: 'transparent', color: '#8E8E93', border: 'none',
+  padding: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600
 };

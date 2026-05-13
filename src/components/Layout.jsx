@@ -162,14 +162,20 @@ const Footer = () => (
   </footer>
 );
 
+import { SosListener } from './SosListener';
+import { ChatBot } from './ChatBot/ChatBot';
+
 export const Layout = () => {
   return (
     <div className="app-wrapper">
+      <SosListener />
       <Header />
       <main className="main-content">
         <Outlet />
       </main>
       <Footer />
+      <ChatBot />
     </div>
   );
 };
+
